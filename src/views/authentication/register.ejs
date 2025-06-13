@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en" class="h-100">
+<head>
+    <meta charset="utf-8" />
+    <title>DMS</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="A fully responsive premium admin dashboard template" />
+    <meta name="author" content="Techzaa" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+
+    <!-- App favicon -->
+    <link rel="shortcut icon" href="assets/images/logo.png">
+    <link href="assets/css/vendor.min.css" rel="stylesheet" type="text/css" />
+    <link href="assets/css/icons.min.css" rel="stylesheet" type="text/css" />
+    <link href="assets/css/app.min.css" rel="stylesheet" type="text/css" />
+    <script src="assets/js/config.js"></script>
+</head>
+
+<body class="h-100 bg-auth"></body>
+<h1 class="text-center fw-bold mt-4" style="letter-spacing: 10px;">Document Management System</h1>
+<div class="d-flex align-items-center justify-content-center min-vh-100">
+    <div class="card w-75 shadow-lg p-0">
+
+    <!-- Title -->
+
+    <div class="row g-0">
+      <!-- Logo Section -->
+      <div class="col-md-6 d-flex align-items-center justify-content-center bg-light p-4">
+        <img src="/assets/images/logo.png" alt="Logo" class="img-fluid" style="max-width: 300px;">
+      </div>
+
+      <!-- Register Form Section -->
+      <div class="col-md-6 p-4">
+
+        <form action="/registerUser" method="POST">
+          <!-- Email -->
+          <div class="mb-3">
+            <label for="email" class="form-label">Email:</label>
+            <div class="input-group">
+             
+              <input type="email" id="email" name="email" class="form-control" required>
+            </div>
+          </div>
+
+          <!-- Username -->
+          <div class="mb-3">
+            <label for="username" class="form-label">Username:</label>
+            <div class="input-group">
+             
+              <input type="text" id="username" name="username" class="form-control" required>
+            </div>
+          </div>
+
+          <!-- Department -->
+          <div class="mb-3">
+            <label for="departmentSelect" class="form-label">Choose Department/Section:</label>
+            <div class="input-group">
+             
+              <select class="form-control" name="department" id="departmentSelect" required>
+                <option value="">Select Department/Section</option>
+                <option value="Insurance">UnderWriting Section</option>
+                <option value="Finance">Finance Department</option>
+                <option value="claims">Claims Section</option>
+                <option value="pf_gf">PF/GF Department</option>
+                <option value="loan">Investment Department</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Password -->
+          <div class="mb-3">
+            <label for="password" class="form-label">Password:</label>
+            <div class="input-group">
+             
+              <input type="password" id="password" name="password" class="form-control" required>
+            </div>
+          </div>
+
+          <!-- Confirm Password -->
+          <div class="mb-4">
+            <label for="ConfirmPassword" class="form-label">Confirm Password:</label>
+            <div class="input-group">
+             
+              <input type="password" id="ConfirmPassword" name="ConfirmPassword" class="form-control" required>
+            </div>
+          </div>
+
+          <!-- Submit Button -->
+          <button type="submit" class="btn btn-primary w-100">Register</button>
+        </form>
+
+        <!-- Login Link -->
+        <div class="text-center mt-3">
+          <a href="/login" class="btn btn-secondary w-100">Login</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,338 @@
+<%- include("./Layouts/header", { user: user})%>
+
+
+<!-- ==================================================== -->
+<!-- Start right Content here -->
+<!-- ==================================================== -->
+<div class="page-content">
+
+  <!-- Start Container Fluid -->
+  <div class="container-fluid">
+
+    <!-- ========== Page Title Start ========== -->
+    <div class="row">
+      <div class="col-12">
+        <div class="page-title-box">
+          <h4 class="mb-0 fw-semibold">Dashboard</h4>
+          <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="javascript: void(0);">DMS</a></li>
+            <li class="breadcrumb-item active">Dashboard</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+    <!-- ========== Page Title End ========== -->
+
+    <!-- Start here.... -->
+    <div class="row">
+      <div class="col-xxl-5">
+        <div class="row">
+
+          <div class="col-md-6">
+            <div class="card overflow-hidden">
+              <div class="card-body">
+                <div class="row">
+                  <div class="col-6">
+                    <div class="avatar-md bg-primary bg-opacity-10 rounded-circle">
+                      <iconify-icon icon="solar:cart-5-broken" class="avatar-title fs-32 text-primary"></iconify-icon>
+                    </div>
+                  </div> <!-- end col -->
+                  <div class="col-6 text-end">
+                    <p class="text-muted mb-0 text-truncate">Total Orders</p>
+                    <h3 class="text-dark mt-1 mb-0">15,432</h3>
+                  </div> <!-- end col -->
+                </div> <!-- end row-->
+
+                <div dir="ltr" class="mt-4">
+                  <div id="orders-chart" class="apex-charts"></div>
+                </div>
+              </div> <!-- end card body -->
+            </div> <!-- end card -->
+          </div> <!-- end col -->
+
+          <div class="col-md-6">
+            <div class="card overflow-hidden">
+              <div class="card-body">
+                <div class="row">
+                  <div class="col-6">
+                    <div class="avatar-md bg-success bg-opacity-10 rounded-circle">
+                      <iconify-icon icon="solar:leaf-broken" class="avatar-title fs-32 text-success"></iconify-icon>
+                    </div>
+                  </div> <!-- end col -->
+                  <div class="col-6 text-end">
+                    <p class="text-muted mb-0 text-truncate">New Leads</p>
+                    <h3 class="text-dark mt-1 mb-0">12,983</h3>
+                  </div> <!-- end col -->
+                </div> <!-- end row-->
+                <div dir="ltr" class="mt-4">
+                  <div id="new-leads-chart" class="apex-charts"></div>
+                </div>
+              </div> <!-- end card body -->
+            </div> <!-- end card -->
+          </div> <!-- end col -->
+
+          <div class="col-md-6">
+            <div class="card overflow-hidden">
+              <div class="card-body">
+                <div class="row">
+                  <div class="col-6">
+                    <div class="avatar-md bg-success bg-opacity-10 rounded-circle">
+                      <iconify-icon icon="solar:hand-shake-broken" class="avatar-title fs-32 text-success"></iconify-icon>
+                    </div>
+                  </div> <!-- end col -->
+                  <div class="col-6 text-end">
+                    <p class="text-muted mb-0 text-truncate">Deals</p>
+                    <h3 class="text-dark mt-1 mb-0">1,283</h3>
+                  </div> <!-- end col -->
+                </div> <!-- end row-->
+                <div dir="ltr" class="mt-4">
+                  <div id="deals-chart" class="apex-charts"></div>
+                </div>
+              </div> <!-- end card body -->
+            </div> <!-- end card -->
+          </div> <!-- end col -->
+
+          <div class="col-md-6">
+            <div class="card overflow-hidden">
+              <div class="card-body">
+                <div class="row">
+                  <div class="col-6">
+                    <div class="avatar-md bg-primary bg-opacity-10 rounded-circle">
+                      <iconify-icon icon="solar:money-bag-broken" class="avatar-title fs-32 text-primary"></iconify-icon>
+                    </div>
+                  </div> <!-- end col -->
+                  <div class="col-6 text-end">
+                    <p class="text-muted mb-0 text-truncate">Booked Revenue</p>
+                    <h3 class="text-dark mt-1 mb-0">$234.8k</h3>
+                  </div> <!-- end col -->
+                </div> <!-- end row-->
+                <div dir="ltr" class="mt-4">
+                  <div id="booked-revenue-chart" class="apex-charts"></div>
+                </div>
+              </div> <!-- end card body -->
+            </div> <!-- end card -->
+          </div> <!-- end col -->
+
+        </div> <!-- end row -->
+
+      </div> <!-- end col -->
+
+      <div class="col-xxl-7">
+
+        <div class="card">
+          <div class="card-header d-flex align-items-center justify-content-between gap-2">
+            <h4 class="card-title">Performance by Country</h4>
+            <div>
+              <button type="button" class="btn btn-sm btn-outline-light">ALL</button>
+              <button type="button" class="btn btn-sm btn-outline-light">1M</button>
+              <button type="button" class="btn btn-sm btn-outline-light">6M</button>
+              <button type="button" class="btn btn-sm btn-outline-light active">1Y</button>
+            </div>
+          </div>
+          <div class="card-body pt-1 px-2">
+            <div class="row align-items-center">
+              <div class="col-lg-7">
+                <div id="world-map-markers" style="height: 250px">
+                </div>
+              </div>
+              <div class="col-lg-5" dir="ltr">
+                <div class="p-3 pb-2">
+                  <!-- Country Data -->
+                  <div class="d-flex justify-content-between align-items-center">
+                    <p class="mb-1">
+                      <iconify-icon icon="circle-flags:us" class="fs-16 align-middle me-1"></iconify-icon> <span class="align-middle">United States</span>
+                    </p>
+                  </div>
+                  <div class="row align-items-center mb-3">
+                    <div class="col">
+                      <div class="progress progress-soft progress-sm">
+                        <div class="progress-bar bg-secondary" role="progressbar" style="width: 82.05%" aria-valuenow="" aria-valuemin="0" aria-valuemax="100"></div>
+                      </div>
+                    </div>
+                    <div class="col-auto">
+                      <p class="mb-0 fs-13 fw-semibold">659k</p>
+                    </div>
+                  </div>
+
+                  <!-- Country Data -->
+                  <div class="d-flex justify-content-between align-items-center">
+                    <p class="mb-1">
+                      <iconify-icon icon="circle-flags:ru" class="fs-16 align-middle me-1"></iconify-icon> <span class="align-middle">Russia</span>
+                    </p>
+                  </div>
+                  <div class="row align-items-center mb-3">
+                    <div class="col">
+                      <div class="progress progress-soft progress-sm">
+                        <div class="progress-bar bg-info" role="progressbar" style="width: 70.5%" aria-valuenow="" aria-valuemin="0" aria-valuemax="100"></div>
+                      </div>
+                    </div>
+                    <div class="col-auto">
+                      <p class="mb-0 fs-13 fw-semibold">485k</p>
+                    </div>
+                  </div>
+
+                  <!-- Country Data -->
+                  <div class="d-flex justify-content-between align-items-center">
+                    <p class="mb-1">
+                      <iconify-icon icon="circle-flags:cn" class="fs-16 align-middle me-1"></iconify-icon> <span class="align-middle">China</span>
+                    </p>
+                  </div>
+                  <div class="row align-items-center mb-3">
+                    <div class="col">
+                      <div class="progress progress-soft progress-sm">
+                        <div class="progress-bar bg-primary" role="progressbar" style="width: 65.8%" aria-valuenow="" aria-valuemin="0" aria-valuemax="100"></div>
+                      </div>
+                    </div>
+                    <div class="col-auto">
+                      <p class="mb-0 fs-13 fw-semibold">355k</p>
+                    </div>
+                  </div>
+
+                  <!-- Country Data -->
+                  <div class="d-flex justify-content-between align-items-center">
+                    <p class="mb-1">
+                      <iconify-icon icon="circle-flags:ca" class="fs-16 align-middle me-1"></iconify-icon> <span class="align-middle">Canada</span>
+                    </p>
+                  </div>
+                  <div class="row align-items-center">
+                    <div class="col">
+                      <div class="progress progress-soft progress-sm">
+                        <div class="progress-bar bg-success" role="progressbar" style="width: 55.8%" aria-valuenow="" aria-valuemin="0" aria-valuemax="100"></div>
+                      </div>
+                    </div>
+                    <div class="col-auto">
+                      <p class="mb-0 fs-13 fw-semibold">204k</p>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+          </div> <!-- end card body -->
+        </div> <!-- end card -->
+      </div> <!-- end col -->
+    </div> <!-- end row -->
+
+    <div class="row">
+      <div class="col-lg-8">
+        <div class="card">
+          <div class="card-header d-flex align-items-center justify-content-between gap-2">
+            <h4 class="card-title">Product Performance</h4>
+            <div>
+              <button type="button" class="btn btn-sm btn-outline-light">ALL</button>
+              <button type="button" class="btn btn-sm btn-outline-light">1M</button>
+              <button type="button" class="btn btn-sm btn-outline-light">6M</button>
+              <button type="button" class="btn btn-sm btn-outline-light active">1Y</button>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="row text-center">
+              <div class="col-md-3 col-6">
+                <div class="bg-soft-light">
+                  <p class="text-muted pt-3 mb-1">Total Sales</p>
+                  <h4 class="pb-3">
+                    <span>$50.4k</span>
+                  </h4>
+                </div>
+              </div>
+              <div class="col-md-3 col-6">
+                <div class="bg-soft-light">
+                  <p class="text-muted pt-3 mb-1">Total Refunds</p>
+                  <h4 class="pb-3">
+                    <span>$3.2k</span>
+                  </h4>
+                </div>
+              </div>
+              <div class="col-md-3 col-6">
+                <div class="bg-soft-light">
+                  <p class="text-muted pt-3 mb-1">Total Orders</p>
+                  <h4 class="pb-3">
+                    <span>1,200</span>
+                  </h4>
+                </div>
+              </div>
+              <div class="col-md-3 col-6">
+                <div class="bg-soft-light">
+                  <p class="text-muted pt-3 mb-1">Net Profit</p>
+                  <h4 class="pb-3">
+                    <span>$15.7k</span>
+                  </h4>
+                </div>
+              </div>
+            </div>
+
+            <div dir="ltr">
+              <div id="dash-performance-chart" class="apex-charts"></div>
+            </div>
+          </div>
+        </div> <!-- end card-->
+      </div> <!-- end col -->
+
+      <div class="col-lg-4">
+        <div class="card card-height-100">
+          <div class="card-header d-flex align-items-center justify-content-between gap-2">
+            <h4 class="card-title flex-grow-1">Trending Products</h4>
+
+            <a href="#" class="btn btn-sm btn-soft-primary">View All</a>
+          </div>
+
+          <div class="card-body pt-0 pb-1">
+            <div dir="ltr">
+              <div id="basic-heatmap" class="apex-charts"></div>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-hover table-sm table-nowrap table-centered m-0">
+              <thead class="bg-light bg-opacity-50">
+                <tr>
+                  <th class="text-muted ps-3 py-1 border-0">Page Path</th>
+                  <th class="text-muted py-1 border-0">Page Views</th>
+                  <th class="text-muted py-1 border-0">Exit Rate</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="ps-3"><a href="#" class="text-muted">venton/iphone-16.html</a></td>
+                  <td>465 </td>
+                  <td><span class="badge badge-soft-success">4.4%</span></td>
+                </tr>
+                <tr>
+                  <td class="ps-3"><a href="#" class="text-muted">venton/ipad-pro.html</a></td>
+                  <td> 426</td>
+                  <td><span class="badge badge-soft-danger">20.4%</span></td>
+                </tr>
+                <tr>
+                  <td class="ps-3"><a href="#" class="text-muted">venton/imac.html</a></td>
+                  <td>254 </td>
+                  <td><span class="badge badge-soft-warning">12.25%</span></td>
+                </tr>
+                <tr>
+                  <td class="ps-3"><a href="#" class="text-muted">venton/macbook-pro.html</a></td>
+                  <td> 3369</td>
+                  <td><span class="badge badge-soft-success">5.2%</span></td>
+                </tr>
+                <tr>
+                  <td class="ps-3"><a href="#" class="text-muted">venton/other.html</a></td>
+                  <td>985 </td>
+                  <td><span class="badge badge-soft-danger">64.2%</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div> <!-- end col -->
+    </div> <!-- end row -->
+
+   
+  </div>
+  <!-- End Container Fluid -->
+
+ 
+
+
+<%- include("./Layouts/footer") %>
+
+
+<!-- Mirrored from techzaa.in/venton/index.html by HTTrack Website Copier/3.x [XR&CO'2014], Thu, 05 Jun 2025 05:35:51 GMT -->
+
+</html>

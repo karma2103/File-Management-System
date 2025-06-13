@@ -1,0 +1,184 @@
+<%- include("./Layouts/header", { user: user }) %>
+
+<div class="page-content">
+  <div class="row">
+    <div aria-live="polite" aria-atomic="true" class="position-relative">
+    <div class="toast-container position-absolute top-0 end-0 p-3" style="z-index: 1055;">
+      <% if (messages.success) { %>
+      <div class="toast align-items-center text-white bg-success border-0 show" role="alert">
+        <div class="d-flex">
+          <div class="toast-body">
+            <%= messages.success %>
+          </div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+      </div>
+      <% } %>
+
+      <% if (messages.error) { %>
+      <div class="toast align-items-center text-white bg-danger border-0 show" role="alert">
+        <div class="d-flex">
+          <div class="toast-body">
+            <%= messages.error %>
+          </div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+      </div>
+      <% } %>
+    </div>
+  </div>
+    <div class="col-12">
+      <div class="page-title-box">
+        <h4 class="mb-0 fw-semibold">Upload Files or Folder</h4>
+        <ol class="breadcrumb mb-0">
+          <li class="breadcrumb-item"><a href="javascript:void(0);">Forms</a></li>
+          <li class="breadcrumb-item active">Custom Upload</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-xl-12">
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title mb-1 anchor" id="upload">
+            Upload Section <a class="anchor-link" href="#upload">#</a>
+          </h5>
+          <p class="text-muted">
+            Select files or a folder to upload. Drag & drop supported.
+          </p>
+
+          <form action="/multiple-upload" method="POST" enctype="multipart/form-data" class="form">
+            <input type="hidden" name="path" value="<%= encodeURIComponent(currentPath) %>">
+
+            <div class="mb-3">
+              <label for="uploadType">Choose Upload Type:</label>
+              <select name="uploadType" id="uploadType" class="form-select" onchange="toggleUploadType()">
+                <option value="Files">Files</option>
+                <option value="Folder">Folder</option>
+              </select>
+            </div>
+
+            <div id="filesInput" class="mb-3" style="display: block;">
+              <label for="input-multi-files">Choose Files:</label>
+              <div class="dropzone-style border p-4 text-center mb-2" id="filesDragDropArea">
+                <i class="h1 bx bx-cloud-upload"></i>
+                <h5>Drop files here or click to select</h5>
+              </div>
+              <input type="file" name="multi-files" id="input-multi-files" class="form-control-file d-none" multiple>
+              <div id="filesPreviewList" class="preview-list"></div>
+            </div>
+
+            <div id="folderInput" class="mb-3" style="display: none;">
+              <label for="folder">Select Folder:</label>
+              <div class="dropzone-style border p-4 text-center mb-2" id="folderDragDropArea">
+                <i class="h1 bx bx-folder-open"></i>
+                <h5>Drop folder here or click to select</h5>
+              </div>
+              <input type="file" name="folder" id="folder" class="form-control-file d-none" webkitdirectory multiple>
+              <label for="folderName" class="form-label">Folder Name:</label>
+              <input type="text" name="folderName" id="folderName" class="form-control" placeholder="Enter a folder name" autocomplete="off">
+              <div id="folderPreviewList" class="preview-list"></div>
+            </div>
+
+            <button type="submit" class="btn btn-primary mt-3">Upload</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let selectedFiles = [];
+  let selectedFolderFiles = [];
+
+  function toggleUploadType() {
+    const uploadType = document.getElementById('uploadType').value;
+    document.getElementById('filesInput').style.display = uploadType === 'Files' ? 'block' : 'none';
+    document.getElementById('folderInput').style.display = uploadType === 'Folder' ? 'block' : 'none';
+  }
+
+  function renderPreviewList(previewContainer, filesArray, inputElement, isFolder = false) {
+    previewContainer.innerHTML = '';
+
+    filesArray.forEach((file, index) => {
+      const fileDiv = document.createElement('div');
+      fileDiv.className = 'preview-item border p-2 mb-1 rounded d-flex justify-content-between align-items-center';
+      fileDiv.innerHTML = `
+        <span>${file.name}</span>
+        <button type="button" class="btn btn-sm btn-danger" onclick="removeFile(${index}, ${isFolder})">x</button>
+      `;
+      previewContainer.appendChild(fileDiv);
+    });
+
+    const dt = new DataTransfer();
+    filesArray.forEach(file => dt.items.add(file));
+    inputElement.files = dt.files;
+  }
+
+  function removeFile(index, isFolder) {
+    if (isFolder) {
+      selectedFolderFiles.splice(index, 1);
+      renderPreviewList(document.getElementById('folderPreviewList'), selectedFolderFiles, document.getElementById('folder'), true);
+    } else {
+      selectedFiles.splice(index, 1);
+      renderPreviewList(document.getElementById('filesPreviewList'), selectedFiles, document.getElementById('input-multi-files'));
+    }
+  }
+
+  const filesInput = document.getElementById('input-multi-files');
+  const filesDragDropArea = document.getElementById('filesDragDropArea');
+
+  filesDragDropArea.addEventListener('click', () => filesInput.click());
+  filesInput.addEventListener('change', () => {
+    selectedFiles = Array.from(filesInput.files);
+    renderPreviewList(document.getElementById('filesPreviewList'), selectedFiles, filesInput);
+  });
+  filesDragDropArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    e.currentTarget.classList.add('bg-light');
+  });
+  filesDragDropArea.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    e.currentTarget.classList.remove('bg-light');
+  });
+  filesDragDropArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    e.currentTarget.classList.remove('bg-light');
+    selectedFiles = Array.from(e.dataTransfer.files);
+    renderPreviewList(document.getElementById('filesPreviewList'), selectedFiles, filesInput);
+  });
+
+  const folderInput = document.getElementById('folder');
+  const folderDragDropArea = document.getElementById('folderDragDropArea');
+
+  folderDragDropArea.addEventListener('click', () => folderInput.click());
+  folderInput.addEventListener('change', () => {
+    selectedFolderFiles = Array.from(folderInput.files);
+    renderPreviewList(document.getElementById('folderPreviewList'), selectedFolderFiles, folderInput, true);
+    if (selectedFolderFiles.length > 0) {
+      document.getElementById('folderName').value = selectedFolderFiles[0].webkitRelativePath.split('/')[0];
+    }
+  });
+  folderDragDropArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    e.currentTarget.classList.add('bg-light');
+  });
+  folderDragDropArea.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    e.currentTarget.classList.remove('bg-light');
+  });
+  folderDragDropArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    e.currentTarget.classList.remove('bg-light');
+    selectedFolderFiles = Array.from(e.dataTransfer.files);
+    renderPreviewList(document.getElementById('folderPreviewList'), selectedFolderFiles, folderInput, true);
+    if (selectedFolderFiles.length > 0) {
+      document.getElementById('folderName').value = selectedFolderFiles[0].webkitRelativePath.split('/')[0];
+    }
+  });
+</script>
+
+<%- include("./Layouts/footer") %>

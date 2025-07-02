@@ -8,6 +8,7 @@ const homeController = require("../controllers/home");
 const uploadController = require("../controllers/upload");
 const LoginController = require("../controllers/login");
 const shareController  = require("../controllers/shareController");
+const searchController = require("../controllers/searchController");
 
 router.use(express.json())
 router.use(session({
@@ -41,6 +42,8 @@ let routes = app => {
   router.get('/shared-users/:type/:id', requireAuth, shareController.shareUserDetails);
   router.post("/stop-share", requireAuth, shareController.removeSharedFolder);
 
+  //search
+  router.get("/DeepSearch", requireAuth, searchController.showSearchPage);
   //Authentication 
   router.post('/registerUser', LoginController.registerUser)
   router.post('/login', LoginController.loginUser)

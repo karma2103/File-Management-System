@@ -3,187 +3,205 @@
 <!-- Start Container Fluid -->
 <div class="page-content">
   <div class="container-fluid">
-<div aria-live="polite" aria-atomic="true" class="position-relative">
-    <div class="toast-container position-absolute top-0 end-0 p-3" style="z-index: 1055;">
-      <% if (messages.success) { %>
-      <div class="toast align-items-center text-white bg-success border-0 show" role="alert">
-        <div class="d-flex">
-          <div class="toast-body">
-            <%= messages.success %>
+    <!-- Toasts -->
+    <div aria-live="polite" aria-atomic="true" class="position-relative">
+      <div class="toast-container position-absolute top-0 end-0 p-3" style="z-index: 1055;">
+        <% if (messages.success) { %>
+        <div class="toast align-items-center text-white bg-success border-0 show" role="alert">
+          <div class="d-flex">
+            <div class="toast-body"><%= messages.success %></div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
           </div>
-          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
         </div>
-      </div>
-      <% } %>
+        <% } %>
 
-      <% if (messages.error) { %>
-      <div class="toast align-items-center text-white bg-danger border-0 show" role="alert">
-        <div class="d-flex">
-          <div class="toast-body">
-            <%= messages.error %>
+        <% if (messages.error) { %>
+        <div class="toast align-items-center text-white bg-danger border-0 show" role="alert">
+          <div class="d-flex">
+            <div class="toast-body"><%= messages.error %></div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
           </div>
-          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
         </div>
+        <% } %>
       </div>
-      <% } %>
     </div>
-  </div>
-    <!-- ========== Page Title Start ========== -->
+
+    <!-- Page Title -->
     <div class="row">
       <div class="col-12">
         <div class="page-title-box">
-          <h4 class="mb-0 fw-semibold">Files and Folder Uploaded</h4>
+          <h4 class="mb-0 fw-semibold">List of Folder Created</h4>
           <ol class="breadcrumb mb-0">
-            <li class="breadcrumb-item"><a href="javascript:void(0);">DMS</a></li>
-            <li class="breadcrumb-item active">Files & Folder List</li>
+            <li class="breadcrumb-item"><a href="#">DMS</a></li>
+            <li class="breadcrumb-item active">Folder Created List</li>
           </ol>
         </div>
       </div>
     </div>
-    <!-- ========== Page Title End ========== -->
 
+    <!-- Folder Table -->
     <div class="row">
       <div class="col-xl-12">
         <div class="card">
-          <div class="d-flex card-header justify-content-between align-items-center">
+          <div class="card-body">
+            <div class="d-flex flex-wrap justify-content-between gap-3">
+              <div class="search-bar">
+                <span><i class="bx bx-search-alt"></i></span>
+                <input type="search" class="form-control" id="search" placeholder="Search files & folders...">
+              </div>
+              <div class="dropdown">
+                <button type="button" class="btn btn-sm btn-primary rounded" onclick="showCreateFolderModal()">
+                  <iconify-icon icon="ic:baseline-add"></iconify-icon> Create Folder
+                </button>
+              </div>
+            </div>
+
             <div>
-              <h4 class="card-title">All Files & Folders List</h4>
-            </div>
-            <div class="dropdown">
-              <button type="button" class="btn btn-sm btn-primary  rounded" onclick="showCreateFolderModal()">
-                Create Folder
-              </button>
-            </div>
-          </div>
+              <div id="searchResults" class="mt-4"></div>
 
-          <div>
-            <% if (folders.length > 0) { %>
-            <div class="table-responsive">
-              <table class="table align-middle mb-0 table-hover table-centered">
-                <thead class="bg-light-subtle">
-                  <tr>
-                    <th>SI No.</th>
-                    <th>File Name</th>
-                    <th>Upload Date</th>
-                    <th>Uploaded By</th>
-                    <th>Department</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <% folders.forEach((folder, index) => { %>
-                  <tr>
-                    <td><%= index+1 %></td>
-                    <td>
-                      <a href="/testcheck/<%= folder._id %>?path=<%= encodeURIComponent(folder.path) %>">
-                        <i>
+              <% if (folders.length > 0) { %>
+              <div class="table-responsive">
+                <table class="table align-middle mb-0 table-hover table-centered">
+                  <thead class="bg-light-subtle">
+                    <tr>
+                      <th>SI No.</th>
+                      <th>File Name</th>
+                      <th>Upload Date</th>
+                      <th>Uploaded By</th>
+                      <th>Department</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="folderTableBody">
+                    <% folders.forEach((folder, index) => { %>
+                    <tr
+                      data-folder-name="<%= folder.folderName.toLowerCase() %>"
+                      data-created-by="<%= folder.createdBy.username.toLowerCase() %>"
+                      data-department="<%= folder.department ? folder.department.toLowerCase() : '' %>"
+                    >
+                      <td><%= index + 1 %></td>
+                      <td>
+                        <a href="/testcheck/<%= folder._id %>?path=<%= encodeURIComponent(folder.path) %>">
                           <iconify-icon icon="solar:folder-with-files-outline"></iconify-icon>
-                        </i>
-                        <%= folder.folderName %>
-                      </a>
-                    </td>
-                    <td><%= folder.createdAt ? folder.createdAt.toDateString() : 'N/A' %></td>
-                    <td><%= folder.createdBy.username %></td>
-                    <td><%= folder.department || 'N/A' %></td>
-                    <td>
-                      <iconify-icon icon="fluent:open-32-filled"></iconify-icon>
-                       <a href="/testcheck/<%= folder._id %>?path=<%= encodeURIComponent(folder.path) %>">Open</a></td>
-                    
-                  </tr>
-                  <% }); %>
-                </tbody>
-              </table>
-            </div>
-            <% } else { %>
-            <p class="p-3">No folders found.</p>
-            <% } %>
-          </div>
+                          <%= folder.folderName %>
+                        </a>
+                      </td>
+                      <td><%= folder.createdAt ? folder.createdAt.toDateString() : 'N/A' %></td>
+                      <td><%= folder.createdBy.username %></td>
+                      <td><%= folder.department || 'N/A' %></td>
+                      <td>
+                        <iconify-icon icon="fluent:open-32-filled"></iconify-icon>
+                        <a href="/testcheck/<%= folder._id %>?path=<%= encodeURIComponent(folder.path) %>">Open</a>
+                      </td>
+                    </tr>
+                    <% }); %>
 
-          <div class="card-footer border-top">
-            <nav aria-label="Page navigation example">
-              <ul class="pagination justify-content-end mb-0">
-                <li class="page-item"><a class="page-link" href="javascript:void(0);">Previous</a></li>
-                <li class="page-item active"><a class="page-link" href="javascript:void(0);">1</a></li>
-                <li class="page-item"><a class="page-link" href="javascript:void(0);">2</a></li>
-                <li class="page-item"><a class="page-link" href="javascript:void(0);">3</a></li>
-                <li class="page-item"><a class="page-link" href="javascript:void(0);">Next</a></li>
-              </ul>
-            </nav>
+                    <!-- No Results Row -->
+                    <tr id="noResultsRow" style="display: none;">
+                      <td colspan="6" class="text-center">No files or folders found.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <% } else { %>
+              <p class="p-3">No folders found.</p>
+              <% } %>
+            </div>
+
+            <!-- Pagination (optional static demo) -->
+            <div class="card-footer border-top">
+              <nav aria-label="Page navigation example">
+                <ul class="pagination justify-content-end mb-0">
+                  <li class="page-item"><a class="page-link" href="#">Previous</a></li>
+                  <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                  <li class="page-item"><a class="page-link" href="#">2</a></li>
+                  <li class="page-item"><a class="page-link" href="#">3</a></li>
+                  <li class="page-item"><a class="page-link" href="#">Next</a></li>
+                </ul>
+              </nav>
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Create Folder Modal -->
-    <div class="modal fade" id="createFolderModal" tabindex="-1" aria-labelledby="createFolderModalLabel" aria-hidden="true">
-      <div class="modal-dialog">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title" id="createFolderModalLabel">Create Folder</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      <!-- Create Folder Modal -->
+      <div class="modal fade" id="createFolderModal" tabindex="-1" aria-labelledby="createFolderModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="createFolderModalLabel">Create Folder</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="folderForm">
+              <div class="modal-body">
+                <label for="folderName" class="sr-only">Folder Name</label>
+                <input type="text" id="folderName" name="folderName" class="form-control" placeholder="Enter folder name" required autocomplete="off">
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-primary">Create</button>
+              </div>
+            </form>
           </div>
-          <form id="folderForm">
-            <div class="modal-body">
-              <label for="folderName" class="sr-only">Folder Name</label>
-              <input type="text" id="folderName" name="folderName" class="form-control" placeholder="Enter folder name" required autocomplete="off">
-            </div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-              <button type="submit" class="btn btn-primary">Create</button>
-            </div>
-          </form>
         </div>
       </div>
-    </div>
 
-  </div>
+      <!-- Scripts -->
+      <script>
+        function showCreateFolderModal() {
+          const modal = new bootstrap.Modal(document.getElementById('createFolderModal'));
+          modal.show();
+        }
 
+        document.getElementById("folderForm").addEventListener("submit", async function (event) {
+          event.preventDefault();
 
-<!-- Scripts -->
-<script>
-  function showCreateFolderModal() {
-    const modal = new bootstrap.Modal(document.getElementById('createFolderModal'));
-    modal.show();
-  }
+          const folderName = document.getElementById("folderName").value.trim();
+          if (!folderName) return alert("Please enter a folder name.");
 
-  document.getElementById("folderForm").addEventListener("submit", async function(event) {
-    event.preventDefault();
+          try {
+            const response = await fetch('/create-folder', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ folderName })
+            });
 
-    const folderName = document.getElementById("folderName").value.trim();
+            const result = await response.json();
+            if (response.ok) {
+              alert("Folder created successfully.");
+              const modal = bootstrap.Modal.getInstance(document.getElementById('createFolderModal'));
+              modal.hide();
+              location.reload();
+            } else {
+              alert("Error: " + (result.error || "Failed to create folder."));
+            }
+          } catch (error) {
+            console.error("Error:", error);
+            alert("Failed to create folder.");
+          }
+        });
 
-    if (!folderName) {
-      alert("Please enter a folder name.");
-      return;
-    }
+        // Search Functionality
+        document.getElementById("search").addEventListener("input", function () {
+          const query = this.value.trim().toLowerCase();
+          const rows = document.querySelectorAll("#folderTableBody tr:not(#noResultsRow)");
+          let hasMatch = false;
 
-    try {
-      const response = await fetch('/create-folder', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          folderName
-        })
-      });
+          rows.forEach(row => {
+            const name = row.getAttribute("data-folder-name") || "";
+            const user = row.getAttribute("data-created-by") || "";
+            const dept = row.getAttribute("data-department") || "";
 
-      const result = await response.json();
+            if (name.includes(query) || user.includes(query) || dept.includes(query)) {
+              row.style.display = "";
+              hasMatch = true;
+            } else {
+              row.style.display = "none";
+            }
+          });
 
-      if (response.ok) {
-        alert("Folder created successfully.");
-        const modal = bootstrap.Modal.getInstance(document.getElementById('createFolderModal'));
-        modal.hide();
-        location.reload(); // Optional: reload to reflect new folder
-      } else {
-        alert("Error: " + (result.error || "Failed to create folder."));
-      }
-    } catch (error) {
-      console.error("Error:", error);
-      alert("Failed to create folder.");
-    }
-  });
-</script>
-
-<!-- Optional (if not already included in header/footer layout) -->
+          document.getElementById("noResultsRow").style.display = hasMatch ? "none" : "";
+        });
+      </script>
 
 <%- include("./Layouts/footer") %>

@@ -1,6 +1,37 @@
 const FolderModel = require("../model/File");
 const UserModel = require("../model/users");
 
+function getFileIcon(fileName) {
+  const ext = fileName.split(".").pop().toLowerCase();
+  switch (ext) {
+    case "pdf":
+      return "teenyicons:pdf-outline";
+    case "doc":
+      return "teenyicons:ms-word-outline";
+    case "docx":
+      return "teenyicons:ms-word-outline";
+    case "xls":
+      return "uiw:file-excel";
+    case "xlsx":
+      return "uiw:file-excel";
+    case "ppt":
+    case "pptx":
+      return "teenyicons:ppt-outline";
+    case "jpg":
+    case "jpeg":
+    case "png":
+    case "gif":
+      return "fas fa-file-image";
+    case "zip":
+    case "rar":
+      return "lsicon:file-rar-outline";
+    case "txt":
+      return "teenyicons:ppt-outline";
+    default:
+      return "fas fa-file";
+  }
+}
+
 const shareFilesFolder = async (req, res) => {
   const { id, access, shareWithUserId, type, redirectUrl } = req.body;
   const backTo = redirectUrl || "/checking"; // Fallback if no URL is passed
@@ -177,6 +208,7 @@ const getSharedWithMeFolders = async (req, res) => {
     res.render("sharing", {
       sharedWithMe: allSharedFolders,
       myShared: mySharedFolders,
+      getFileIcon,
       userId,
       user,
       success: req.flash("success"),

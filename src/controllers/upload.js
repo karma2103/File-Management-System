@@ -1,13 +1,14 @@
 const handleFileUpload = require("../middleware/upload");
 const FolderModel = require("../model/File");
 const UserModel = require("../model/users");
-const path = require("path");
 const ftp = require("basic-ftp");
-const fs = require("fs");
-const { Readable } = require("stream");
+const CommitteeGroup = require("../model/Committee");
 require("dotenv").config();
 const Folder = require("../model/folder");
 const mime = require("mime-types");
+const Share = require("../model/share");
+const stream = require('stream');
+
 
 const ftpCredentials = {
   Finance: {
@@ -185,8 +186,8 @@ const getFolderContents = async (req, res) => {
     const folder = await FolderModel.findById(folderId)
       .skip(skip)
       .limit(limit)
-      .populate("uploadedBy", "username department")
-      .populate("files.uploadedBy", "username department");
+      .populate("uploadedBy", "ame department")
+      .populate("files.uploadedBy", "name department");
     // console.log(folder);
     if (!folder) {
       return res.status(404).render("error", { message: "Folder not found" });
@@ -313,7 +314,8 @@ const createFolder = async (req, res) => {
       department,
       path: folderPath,
     });
-
+    console.log(newFolder);
+    
     await newFolder.save();
     req.flash(
       "success",
@@ -352,7 +354,7 @@ const checkFolder = async (req, res) => {
     const folders = await Folder.find({
       $or: [{ createdBy: loggedInUserId }],
     })
-      .populate("createdBy", "username ")
+      .populate("createdBy", "name ")
       .skip(skip)
       .limit(limit);
 
@@ -374,48 +376,68 @@ const checkFolder = async (req, res) => {
 
 const testCheck = async (req, res) => {
   try {
-    
-    //pagination
     const page = parseInt(req.query.page) || 1;
     const limit = 10;
     const skip = (page - 1) * limit;
+
     const totalItems = await FolderModel.countDocuments();
     const folderId = req.params.id;
-    //share folder or files
-    const allUsers = await UserModel.find({}).select("username department");
+    
+
+    const allUsers = await UserModel.find({}).select("user name");
+    const allgroups = await CommitteeGroup.find({}).select("groupName");
+
     const loggedInUserId = req.session.userId;
     const user = await UserModel.findById(loggedInUserId);
     if (!user) {
       req.flash("error", "User not found.");
       return res.redirect("/upload");
     }
-    // Find the folder by ID and populate uploadedBy in files and folder
+
     const parentFolder = await Folder.findById(folderId);
-    if (!parentFolder) {
-      return res.status(404).send("Folder not found");
-    }
-    const folder = await FolderModel.find({ linkedFolder: parentFolder._id })
+    if (!parentFolder) return res.status(404).send("Folder not found");
+
+    // 1. Get child folders with files
+    const folders = await FolderModel.find({ linkedFolder: parentFolder._id })
       .skip(skip)
       .limit(limit)
       .populate("uploadedBy")
-      .populate("sharedWith.user") 
       .populate("files.uploadedBy")
-      .populate("files.sharedWith.user") 
       .lean();
 
-    if (!folder) return res.status(404).send("Folder not found");
+    // 2. Get all shares for this parent folder's children
+    const folderIds = folders.map(f => f._id);
+    const fileIds = folders.flatMap(f => f.files.map(file => file._id));
 
-    // Make sure folder.files is always an array for safety
-    if (!Array.isArray(folder.files)) {
-      folder.files = [];
-    }
+    const shares = await Share.find({
+      $or: [
+        { folderId: { $in: folderIds } },
+        { fileId: { $in: fileIds } },
+      ]
+    })
+    .populate("sharedWith.userId")
+    .populate("sharedWith.groupId")
+    .lean();
+
+    // 3. Attach sharing info to folders and files
+    folders.forEach(folder => {
+      const shareEntry = shares.find(s => s.folderId?.toString() === folder._id.toString());
+      folder.sharedWith = shareEntry ? shareEntry.sharedWith : [];
+
+      folder.files = folder.files.map(file => {
+        const fileShare = shares.find(s => s.fileId?.toString() === file._id.toString());
+        file.sharedWith = fileShare ? fileShare.sharedWith : [];
+        return file;
+      });
+    });
 
     res.render("eachFiles copy.ejs", {
-      folder, // single folder with files
+      folder: folders,
       getFileIcon,
       formatFileSize,
       user,
       allUsers,
+      allgroups,
       currentPage: page,
       totalPages: Math.ceil(totalItems / limit),
       userSessionId: req.session.userId,
@@ -471,10 +493,6 @@ const viewFileFromQNAP = async (req, res) => {
     client.close();
   }
 };
-
-
-
-
 
 module.exports = {
   multipleUpload,

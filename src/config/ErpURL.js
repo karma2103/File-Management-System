@@ -1,0 +1,1 @@
+export const ERPURL = 'http://172.16.16.195/bilerp/login';

@@ -60,31 +60,12 @@
         <!-- Form Section - Right -->
         <div class="col-md-6 p-4 d-flex flex-column justify-content-center">
           <h2 class="fw-bold fs-24">Sign In</h2>
-          <p class="text-muted mb-4">Enter your email address and password to access the admin panel.</p>
-          <form action="/login" method="POST" class="authentication-form">
-            <div class="mb-3">
-              <label class="form-label" for="example-email">Email</label>
-              <input type="email" id="example-email" name="email" class="form-control" placeholder="Enter your email" required autocomplete="off">
-            </div>
-            <div class="mb-3">
-              <a href="auth-password.html" class="float-end text-muted text-unline-dashed ms-1">Reset password</a>
-              <label class="form-label" for="example-password">Password</label>
-              <input type="password" name="password" id="example-password" class="form-control" placeholder="Enter your password">
-            </div>
-            <div class="mb-3">
-              <div class="form-check">
-                <input type="checkbox" class="form-check-input" id="checkbox-signin">
-                <label class="form-check-label" for="checkbox-signin">Remember me</label>
-              </div>
-            </div>
-            <div class="mb-3 d-grid">
-              <button class="btn btn-soft-primary" type="submit">Sign In</button>
-            </div>
+          <p class="text-muted mb-4">Note: Link from ERP</p>
+          <form action="http://localhost:3000/api/v1/login" method="POST">
+            <input type="hidden" name="data[accessToken]" value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbXBsb3llZV9pZCI6IkJJTC8yMDIzL0UwMjI1IiwibmFtZSI6IkJpbm9kIEdoYWxsZXkiLCJlbWFpbCI6ImJpbm9kZ2hhbGxleTc3QGdtYWlsLmNvbSIsImVtcGxveWVlX2NvZGUiOiIyMDIzMDgwMTMzNzkiLCJkZXBhcnRtZW50IjoiRmluYW5jZSIsImlhdCI6MTc1MTk3MTY0NSwiZXhwIjoxNzUxOTc2NjQ1fQ.N4I8VJBP9LO1Y6GxLOk2uvdQsUKSUk2-0-HV_vnHBrk" />
+            <button type="submit">Login</button>
           </form>
-          <p class="text-muted text-center mb-0">
-            Don't have an account?
-            <a href="/register" class="text-dark fw-bold ms-1">Sign Up</a>
-          </p>
+
         </div>
       </div>
     </div>
@@ -96,10 +77,12 @@
 
 </html>
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
+  document.addEventListener('DOMContentLoaded', function() {
     const toastElList = [].slice.call(document.querySelectorAll('.toast'));
-    toastElList.map(function (toastEl) {
-      const toast = new bootstrap.Toast(toastEl, { delay: 2000 });
+    toastElList.map(function(toastEl) {
+      const toast = new bootstrap.Toast(toastEl, {
+        delay: 2000
+      });
       toast.show();
     });
   });

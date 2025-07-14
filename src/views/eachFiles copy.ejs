@@ -51,7 +51,7 @@
               </div>
               <div class="dropdown">
                 <button type="button" class="btn btn-sm btn-primary dropdown-toggle" onclick="toggleDropdown('filterDropdown')">
-                  Add New
+                  Upload New
                 </button>
                 <div class="dropdown-menu" id="filterDropdown">
                   <a class="dropdown-item" id="uploadFolder" href="#">Folder</a>
@@ -88,7 +88,7 @@
                       <a href="/folder/<%= item._id %>"><%= item.folderName || 'Unnamed Folder' %></a>
                     </td>
                     <td><%= new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(item.date)) %></td>
-                    <td><%= item.uploadedBy?.username || 'Unknown' %></td>
+                    <td><%= item.uploadedBy?.name || 'Unknown' %></td>
                     <td><%= item.files?.length || 0 %> files</td>
                     <td><%= item.uploadedBy?.department || 'Unknown' %></td>
                     <td>
@@ -129,7 +129,7 @@
                       <a href="/view/<%= file._id %>" target="_blank" rel="noopener noreferrer"><%= file.originalname %></a>
                     </td>
                     <td><%= new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(file.date)) %></td>
-                    <td><%= file.uploadedBy?.username || 'Unknown' %></td>
+                    <td><%= file.uploadedBy?.name || 'Unknown' %></td>
                     <td><%= formatFileSize(file.size) %></td>
                     <td><%= file.uploadedBy?.department || 'Unknown' %></td>
                     <td>
@@ -145,9 +145,10 @@
                     </td>
                     <td>
                       <div class="d-flex gap-2">
-                        <a href="/view/<%= file._id %>" target="_blank" class="btn btn-soft-secondary btn-sm">
+                        <a href="/view/<%= file._id %>" class="btn btn-soft-secondary btn-sm ">
                           <iconify-icon icon="fluent:open-32-filled" class="align-middle fs-18"></iconify-icon>
                         </a>
+
                         <button type="button" class="btn btn-soft-primary btn-sm open-share-modal" data-id="<%= file._id %>" data-type="file" data-name="<%= file.originalname %>">
                           <iconify-icon icon="majesticons:share-line" class="align-middle fs-18"></iconify-icon>
                         </button>
@@ -167,8 +168,8 @@
                   <% } %>
                 </tbody>
                 <tr id="noResultsRow" style="display: none;">
-                    <td colspan="8" class="text-center">No folders or files found.</td>
-                  </tr>
+                  <td colspan="8" class="text-center">No folders or files found.</td>
+                </tr>
               </table>
             </div>
 
@@ -198,26 +199,60 @@
             <h5 class="modal-title" id="shareModalLabel">Share <span id="shareItemTypeText"></span></h5>
             <button type="button" class="btn-close" aria-label="Close" id="shareModalClose"></button>
           </div>
+
           <div class="modal-body">
             <input type="hidden" name="id" id="shareItemId" value="" />
             <input type="hidden" name="type" id="shareItemType" value="" />
             <input type="hidden" name="redirectUrl" id="redirectUrlInput" value="" />
-            <div class="mb-3">
-              <label for="shareWithUserId" class="form-label">Share With User</label>
-              <select name="shareWithUserId" id="shareWithUserId" class="form-select" required>
-                <% allUsers.forEach(function(u) { %>
-                <option value="<%= u._id %>"><%= u.username %> (<%= u.department %>)</option>
-                <% }) %>
-              </select>
+
+            <!-- Tabs -->
+            <ul class="nav nav-tabs" id="shareTabs" role="tablist">
+              <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="individual-tab" data-bs-toggle="tab" data-bs-target="#individual" type="button" role="tab" aria-controls="individual" aria-selected="true">Individual</button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="group-tab" data-bs-toggle="tab" data-bs-target="#group" type="button" role="tab" aria-controls="group" aria-selected="false">Group</button>
+              </li>
+            </ul>
+
+            <div class="tab-content mt-3" id="shareTabsContent">
+              <!-- Individual Share Tab -->
+              <div class="tab-pane fade show active" id="individual" role="tabpanel" aria-labelledby="individual-tab">
+                <div class="mb-3">
+                  <label for="shareWithUserId" class="form-label">Share With User</label>
+                  <select name="shareWithUserId" id="shareWithUserId" class="form-select" required>
+                    <% (allUsers || []).forEach(function(u) { %>
+                    <option value="<%= u._id %>"><%= u.department %> (<%= u.name %>)</option>
+                    <% }) %>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Group Share Tab -->
+              <div class="tab-pane fade" id="group" role="tabpanel" aria-labelledby="group-tab">
+                <div class="mb-3">
+                  <label for="shareWithGroupId" class="form-label">Share With Group</label>
+                  <select name="shareWithGroupId" id="shareWithGroupId" class="form-select">
+                    <% (allgroups || []).forEach(function(g) { %>
+                    <option value="<%= g._id %>"><%= g.groupName %></option>
+                    <% }) %>
+                  </select>
+                </div>
+              </div>
             </div>
-            <div class="mb-3">
+
+             <div class="mb-3">
               <label for="access" class="form-label">Access Level</label>
-              <select name="access" id="access" class="form-select" required>
-                <option value="read">Read</option>
-                <option value="write">Write</option>
+              <select name="access" id="access" class="form-select" required onchange="updateAccessNote()">
+                <option value="read">View</option>
+                <option value="NoDownload">Can't Download</option>
               </select>
+              <span id="access-note" class="form-text text-muted d-block mt-1">
+                Can view and download.
+              </span>
             </div>
           </div>
+
           <div class="modal-footer">
             <button type="submit" class="btn btn-primary">Share</button>
             <button type="button" class="btn btn-secondary" id="shareModalCancel">Cancel</button>
@@ -227,6 +262,22 @@
     </div>
   </div>
 
+<script>
+  function updateAccessNote() {
+    const accessSelect = document.getElementById('access');
+    const accessNote = document.getElementById('access-note');
+    const selectedValue = accessSelect.value;
+
+    if (selectedValue === 'read') {
+      accessNote.textContent = 'Can view and download.';
+    } else if (selectedValue === 'NoDownload') {
+      accessNote.textContent = 'Can view but cannot download.';
+    }
+  }
+
+  // Optional: Call once on page load in case value is pre-selected
+  document.addEventListener('DOMContentLoaded', updateAccessNote);
+</script>
   <!-- Manage Access Modal -->
   <div id="accessModal" class="modal" tabindex="-1" aria-labelledby="accessModalLabel" aria-hidden="true" style="display:none;">
     <div class="modal-dialog">
@@ -238,7 +289,7 @@
         <div class="modal-body">
           <p><strong>Item:</strong> <span id="accessItemName"></span></p>
           <ul id="sharedUsersList" class="list-group">
-            <!-- Shared users will be injected here -->
+            <!-- Shared users/groups will be injected here -->
           </ul>
         </div>
         <div class="modal-footer">
@@ -247,6 +298,7 @@
       </div>
     </div>
   </div>
+
   <!-- share model  -->
   <script>
     // Dropdown toggle for Add New
@@ -300,6 +352,38 @@
     });
   </script>
 
+  <!-- Handling the submit for share model  -->
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const shareForm = document.getElementById("shareForm");
+      const userSelect = document.getElementById("shareWithUserId");
+      const groupSelect = document.getElementById("shareWithGroupId");
+
+      shareForm.addEventListener("submit", function(e) {
+        const activeTab = document.querySelector(".nav-link.active").id;
+
+        if (activeTab === "individual-tab") {
+          groupSelect.disabled = true;
+          userSelect.disabled = false;
+        } else if (activeTab === "group-tab") {
+          userSelect.disabled = true;
+          groupSelect.disabled = false;
+        }
+      });
+
+      // Optional: Reset on modal close
+      document.getElementById("shareModalClose").addEventListener("click", () => {
+        userSelect.disabled = false;
+        groupSelect.disabled = false;
+      });
+
+      document.getElementById("shareModalCancel").addEventListener("click", () => {
+        userSelect.disabled = false;
+        groupSelect.disabled = false;
+      });
+    });
+  </script>
+
   <!-- adding files and folder model -->
   <script>
     function toggleDropdown(id) {
@@ -322,52 +406,59 @@
     const accessItemName = document.getElementById('accessItemName');
     const sharedUsersList = document.getElementById('sharedUsersList');
 
-    // Function to open the access modal
     function openStopShareModel(itemId, itemType, itemName) {
       accessItemName.textContent = `${itemType.charAt(0).toUpperCase() + itemType.slice(1)}: ${itemName}`;
       sharedUsersList.innerHTML = '<li class="list-group-item text-muted">Loading...</li>';
 
-      // Fetch shared user data via AJAX
       fetch(`/shared-users/${itemType}/${itemId}`)
         .then(response => response.json())
         .then(data => {
-          sharedUsersList.innerHTML = ''; // Clear existing list
+          sharedUsersList.innerHTML = '';
 
-          if (data.success) {
-            // ✅ Check if sharedWith is a valid array before accessing length
-            if (Array.isArray(data.sharedWith) && data.sharedWith.length > 0) {
-              data.sharedWith.forEach(user => {
-                const li = document.createElement('li');
-                li.className = 'list-group-item d-flex justify-content-between align-items-center';
-                const username = user.user?.username || "Unknown";
-                const department = user.user?.department || "Unknown";
-                li.innerHTML = `
-                <span>${username} (${department})</span>
-                <form method="POST" action="/stop-share" class="d-inline">
-                <input type="hidden" name="itemId" value="${itemId}">
-                <input type="hidden" name="itemType" value="${itemType}">
-                <input type="hidden" name="userId" value="${user.user?._id || user._id}">
-                <input type="hidden" name="redirectUrl" value="${encodeURIComponent(window.location.pathname + window.location.search)}">
-                <button type="submit" class="btn btn-sm btn-danger">Stop Sharing</button>
-              </form>`;
-                sharedUsersList.appendChild(li);
-              });
-            } else {
-              sharedUsersList.innerHTML = '<li class="list-group-item text-danger">No users found.</li>';
-            }
+          if (data.success && Array.isArray(data.sharedWith) && data.sharedWith.length > 0) {
+            data.sharedWith.forEach(entry => {
+              const li = document.createElement('li');
+              li.className = 'list-group-item d-flex justify-content-between align-items-center';
+
+              let label = '';
+              let hiddenInputs = '';
+
+              if (entry.user) {
+                label = `User: ${entry.user.name})`;
+                hiddenInputs += `<input type="hidden" name="userId" value="${entry.user._id}">`;
+              } else if (entry.group) {
+                label = `Group: ${entry.group.groupName}`;
+                hiddenInputs += `<input type="hidden" name="groupId" value="${entry.group._id}">`;
+              }
+
+              hiddenInputs += `
+            <input type="hidden" name="itemId" value="${itemId}">
+            <input type="hidden" name="itemType" value="${itemType}">
+            <input type="hidden" name="redirectUrl" value="${encodeURIComponent(window.location.pathname + window.location.search)}">
+          `;
+
+              li.innerHTML = `
+            <span>${label} — <em>${entry.access}</em></span>
+            <form method="POST" action="/stop-share" class="d-inline">
+              ${hiddenInputs}
+              <button type="submit" class="btn btn-sm btn-danger">Stop Sharing</button>
+            </form>
+          `;
+
+              sharedUsersList.appendChild(li);
+            });
           } else {
-            sharedUsersList.innerHTML = '<li class="list-group-item text-danger">Error loading users.</li>';
+            sharedUsersList.innerHTML = '<li class="list-group-item text-danger">No sharing records found.</li>';
           }
         })
         .catch(error => {
           console.error('Error fetching shared users:', error);
-          sharedUsersList.innerHTML = '<li class="list-group-item text-danger">Failed to load user list.</li>';
+          sharedUsersList.innerHTML = '<li class="list-group-item text-danger">Failed to load shared data.</li>';
         });
 
       accessModal.style.display = 'block';
     }
 
-    // Close modal functions
     function closeAccessModal() {
       accessModal.style.display = 'none';
     }
@@ -381,42 +472,43 @@
       }
     });
   </script>
+
   <!-- search functionlity  -->
- <script>
-  document.addEventListener("DOMContentLoaded", function () {
-    const searchInput = document.getElementById("search");
-    const rows = document.querySelectorAll("tbody tr.file-row, tbody tr.folder-row");
-    const noResultsRow = document.getElementById("noResultsRow");
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      const searchInput = document.getElementById("search");
+      const rows = document.querySelectorAll("tbody tr.file-row, tbody tr.folder-row");
+      const noResultsRow = document.getElementById("noResultsRow");
 
-    function filterRows() {
-      const query = searchInput.value.trim().toLowerCase();
-      let anyVisible = false;
+      function filterRows() {
+        const query = searchInput.value.trim().toLowerCase();
+        let anyVisible = false;
 
-      rows.forEach(row => {
-        const text = row.innerText.toLowerCase();
-        if (text.includes(query)) {
-          row.style.display = "";
-          anyVisible = true;
+        rows.forEach(row => {
+          const text = row.innerText.toLowerCase();
+          if (text.includes(query)) {
+            row.style.display = "";
+            anyVisible = true;
+          } else {
+            row.style.display = "none";
+          }
+        });
+
+        // Show/hide "No Results" row
+        if (!anyVisible) {
+          noResultsRow.style.display = "table-row";
         } else {
-          row.style.display = "none";
+          noResultsRow.style.display = "none";
         }
-      });
-
-      // Show/hide "No Results" row
-      if (!anyVisible) {
-        noResultsRow.style.display = "table-row";
-      } else {
-        noResultsRow.style.display = "none";
       }
-    }
 
-    searchInput.addEventListener("input", filterRows);
-    filterRows(); // Initial call to set correct state
-  });
-</script>
-
+      searchInput.addEventListener("input", filterRows);
+      filterRows(); // Initial call to set correct state
+    });
+  </script>
 
 
+ 
 
 
   <%- include("./Layouts/footer") %>

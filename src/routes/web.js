@@ -6,9 +6,12 @@ const flash = require('connect-flash');
 const router = express.Router();
 const homeController = require("../controllers/home");
 const uploadController = require("../controllers/upload");
-const LoginController = require("../controllers/login");
 const shareController  = require("../controllers/shareController");
 const searchController = require("../controllers/searchController");
+const APIController = require("../controllers/api/API");
+const AuthController = require("../controllers/api/Auth");
+const CommitteeController = require("../controllers/Committe");
+const loginController = require("../controllers/login");
 
 router.use(express.json())
 router.use(session({
@@ -23,10 +26,8 @@ router.use((req, res, next) => {
 });
 let routes = app => {
   //Auth 
-  router.get('/register', homeController.getRegister)
-  router.get("/Uploads", requireAuth, homeController.getHome);  
-  router.get('/login', homeController.getLogin);
-  router.get('/welcome', requireAuth, homeController.getWelcome);
+  router.get("/Uploads", requireAuth, homeController.getHome); 
+  router.get('/welcome', homeController.getWelcome);
   router.post("/multiple-upload", requireAuth, uploadController.multipleUpload);
   // router.get('/',requireAuth, uploadController.getScan)
   router.get('/folder/:folderId',requireAuth, uploadController.getFolderContents)
@@ -41,15 +42,22 @@ let routes = app => {
   router.get('/sharing', requireAuth, shareController.getSharedWithMeFolders);
   router.get('/shared-users/:type/:id', requireAuth, shareController.shareUserDetails);
   router.post("/stop-share", requireAuth, shareController.removeSharedFolder);
+  router.get('/shared-files/:fileId', requireAuth, shareController.ShareFilesView);
 
   //search
   router.get("/DeepSearch", requireAuth, searchController.showSearchPage);
-  //Authentication 
-  router.post('/registerUser', LoginController.registerUser)
-  router.post('/login', LoginController.loginUser)
-  router.get('/logout',LoginController.logout)
 
-  // router.delete('/delete/filename', uploadController.deleteFile);
+  // API Autjentication
+  router.post('/api/v1/login', APIController.authLogin);
+  router.get("/password", AuthController.GetAuth )
+  router.get("/logout",loginController.logout); 
+
+  //add Committees
+  router.post('/AddGroup', requireAuth, CommitteeController.AddGroupMembers);
+  router.get('/committees', requireAuth, CommitteeController.ViewCommittee);
+  router.get('/addCommittee', requireAuth, CommitteeController.addCommittee);
+  router.get('/editGroup/:id', requireAuth, CommitteeController.editGroup);
+  router.post('/committee-groups/:id/edit', requireAuth, CommitteeController.postEditGroup);
 
   return app.use("/", router);
 };

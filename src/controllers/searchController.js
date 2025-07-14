@@ -1,6 +1,7 @@
 const FolderModel = require("../model/File");
 const CreateFolder = require("../model/folder");
 const UserModel = require("../model/users");
+const { ERPURL } = require("../config/ErpURL");
 
 async function deepSearchWithFilter(folderId, keyword, department) {
   keyword = keyword.toLowerCase();
@@ -77,7 +78,7 @@ const showSearchPage = async (req, res) => {
     const user = await UserModel.findById(req.session.userId);
     if (!user) {
       req.flash("error", "User not found!");
-      return res.redirect("/login");
+      return res.redirect(`${ERPURL}`); 
     }
 
     const { keyword } = req.query;

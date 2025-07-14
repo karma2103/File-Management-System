@@ -1,0 +1,115 @@
+<%- include("./Layouts/header", { user: user }) %>
+<style>
+    .choices__item--selectable.bg-blue {
+    background-color: #ff0000 !important;
+    color: #fff !important;
+  }
+</style>
+<div class="page-content">
+
+  <!-- Start Container Fluid -->
+  <div class="container-fluid">
+
+    <!-- ========== Page Title Start ========== -->
+    <div class="row">
+      <div class="col-12">
+        <div class="page-title-box">
+          <h4 class="mb-0 fw-semibold">Edit Group Details and Members</h4>
+          <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="javascript: void(0);">DMS</a></li>
+            <li class="breadcrumb-item active">Groups</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+    <!-- ========== Page Title End ========== -->
+
+    <div class="row">
+      <div class="col-lg-12">
+        <div class="card">
+          <div class="card-header">
+            <h4 class="card-title">Edit Group</h4>
+          </div>
+          <div class="card-body">
+            <form action="/committee-groups/<%= group._id %>/edit" method="POST">
+              <div class="row">
+                <!-- Group Name -->
+                <div class="col-lg-6">
+                  <div class="mb-3">
+                    <label for="roles-name" class="form-label">Group Name</label>
+                    <input type="text" id="roles-name" name="groupName" class="form-control" value="<%= group.groupName %>" required>
+                  </div>
+                </div>
+
+                <!-- Members (Multi-select) -->
+                <div class="col-lg-6">
+                  <div class="mb-3">
+                    <label for="choices-multiple-remove-button" class="form-label">Add Members</label>
+                    <select class="form-control" id="choices-multiple-remove-button" data-choices data-choices-removeItem name="members" multiple>
+                      <% users.forEach(function(u) { 
+                            const isSelected = group.members.some(m => m._id.toString() === u._id.toString());
+                        %>
+                      <option value="<%= u._id %>" <%= isSelected ? 'selected' : '' %> <%= isSelected ? 'data-custom-class="bg-blue text-white"' : '' %>>
+                        <%= u.name %>
+                      </option>
+                      <% }) %>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Member Secretary -->
+                <div class="col-lg-6">
+                  <div class="mb-3">
+                    <label for="memberSecretary" class="form-label">Group Leader</label>
+                    <select name="memberSecretary" class="form-control" required>
+                      <% users.forEach(function(u) { %>
+                      <option value="<%= u._id %>" <%= group.memberSecretary && u._id.toString() === group.memberSecretary._id.toString() ? 'selected' : '' %>>
+                        <%= u.name %>
+                      </option>
+                      <% }) %>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Submit Button -->
+              <div class="modal-footer">
+                <button type="submit" class="btn btn-primary">Update</button>
+              </div>
+            </form>
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const multipleSelect = document.getElementById('choices-multiple-remove-button');
+    if (multipleSelect) {
+      new Choices(multipleSelect, {
+        removeItemButton: true,
+        classNames: {
+          itemSelectable: 'choices__item--selectable',
+        },
+        callbackOnCreateTemplates: function(template) {
+          return {
+            item: (classNames, data) => {
+              const customClass = data.customProperties?.customClass || '';
+              return template(`
+                <div class="${classNames.item} ${customClass}" data-id="${data.id}" data-value="${data.value}" ${data.active ? 'aria-selected="true"' : ''}>
+                  ${data.label}
+                  <button type="button" class="choices__button" data-button>Remove</button>
+                </div>
+              `);
+            }
+          };
+        }
+      });
+    }
+  });
+</script>
+
+  <!-- End Container Fluid -->
+  <%- include("./Layouts/footer") %>

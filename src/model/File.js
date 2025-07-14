@@ -11,23 +11,6 @@ const fileSchema = new mongoose.Schema({
     ref: "User",
     required: true,
   },
-  sharedWith: [
-    {
-      user: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-      },
-      access: {
-        type: String,
-        enum: ["read", "write"],
-        default: "read",
-      },
-      sharedAt: {
-        type: Date,
-        default: Date.now,
-      },
-    },
-  ],
 });
 
 const folderSchema = new mongoose.Schema({
@@ -43,24 +26,7 @@ const folderSchema = new mongoose.Schema({
   linkedFolder: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "CreateFolder",
-  },
-  sharedWith: [
-    {
-      user: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-      },
-      access: {
-        type: String,
-        enum: ["read", "write"],
-        default: "read",
-      },
-      sharedAt: {
-        type: Date,
-        default: Date.now,
-      },
-    },
-  ],
+  }
 });
 
 const FolderModel = mongoose.model("Folder", folderSchema);

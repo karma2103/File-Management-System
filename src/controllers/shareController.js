@@ -1,6 +1,35 @@
 const FolderModel = require("../model/File");
 const UserModel = require("../model/users");
+const ShareModel = require("../model/share");
+const CommitteeGroup = require("../model/Committee");
+const CreateFolder = require("../model/folder");
+const ftp = require("basic-ftp");
+const mime = require("mime-types");
+const { PDFDocument } = require("pdf-lib");
+const stream = require("stream");
 
+const ftpCredentials = {
+  Finance: {
+    host: process.env.FTP_HOST_FINANCE,
+    user: process.env.FTP_USER_FINANCE,
+    password: process.env.FTP_PASSWORD_FINANCE,
+  },
+  Insurance: {
+    host: process.env.FTP_HOST_INSURANCE,
+    user: process.env.FTP_USER_INSURANCE,
+    password: process.env.FTP_PASSWORD_INSURANCE,
+  },
+  investment: {
+    host: process.env.FTP_HOST_LOAN,
+    user: process.env.FTP_USER_LOAN,
+    password: process.env.FTP_PASSWORD_LOAN,
+  },
+  ppf_gf: {
+    host: process.env.FTP_HOST_PPF_GF,
+    user: process.env.FTP_USER_PPF_GF,
+    password: process.env.FTP_PASSWORD_PPF_GF,
+  },
+};
 function getFileIcon(fileName) {
   const ext = fileName.split(".").pop().toLowerCase();
   switch (ext) {
@@ -31,290 +60,458 @@ function getFileIcon(fileName) {
       return "fas fa-file";
   }
 }
-
+//controller to share files and folders
 const shareFilesFolder = async (req, res) => {
-  const { id, access, shareWithUserId, type, redirectUrl } = req.body;
-  const backTo = redirectUrl || "/checking"; // Fallback if no URL is passed
+  const { id, access, shareWithUserId, shareWithGroupId, type, redirectUrl } =
+    req.body;
+
+  const backTo = redirectUrl || "/checking";
+  const sharerId = req.session.userId;
 
   try {
-    const sharerId = req.session.userId;
-
-    const receiverUser = await UserModel.findById(shareWithUserId);
-    if (!receiverUser) {
-      req.flash("error", "User to share with not found");
+    if (!shareWithUserId && !shareWithGroupId) {
+      req.flash("error", "Please select a user or group to share with.");
       return res.redirect(backTo);
     }
+
+    if (!["file", "folder"].includes(type)) {
+      req.flash("error", "Invalid share type.");
+      return res.redirect(backTo);
+    }
+
+    let folder = null;
+    let file = null;
 
     if (type === "folder") {
-      const folder = await FolderModel.findById(id);
-      if (!folder) {
-        req.flash("error", "Folder not found");
-        return res.redirect(backTo);
+      folder = await FolderModel.findById(id);
+    } else {
+      folder = await FolderModel.findOne({ "files._id": id });
+      if (folder) {
+        file = folder.files.id(id);
       }
+    }
 
-      if (
-        sharerId === shareWithUserId &&
-        folder.uploadedBy.toString() === sharerId
-      ) {
-        req.flash("error", "You cannot share the folder with yourself as the owner.");
-        return res.redirect(backTo);
-      }
-
-      const alreadyShared = folder.sharedWith.find(
-        (s) => s.user.toString() === shareWithUserId
-      );
-      if (alreadyShared) {
-        req.flash("info", "Folder is already shared with this user.");
-        return res.redirect(backTo);
-      }
-
-      folder.sharedWith.push({
-        user: shareWithUserId,
-        access,
-        sharedAt: new Date(),
-      });
-
-      await folder.save();
-      req.flash("success", "Folder shared successfully");
+    if (!folder || (type === "file" && !file)) {
+      req.flash("error", `${type === "folder" ? "Folder" : "File"} not found.`);
       return res.redirect(backTo);
     }
 
-    else if (type === "file") {
-      const folder = await FolderModel.findOne({ "files._id": id });
-      if (!folder) {
-        req.flash("error", "File not found");
-        return res.redirect(backTo);
-      }
+    const uploaderId =
+      type === "folder"
+        ? folder.uploadedBy?.toString()
+        : file.uploadedBy?.toString();
 
-      const file = folder.files.id(id);
-      if (!file) {
-        req.flash("error", "File not found");
-        return res.redirect(backTo);
-      }
-
-      if (
-        sharerId === shareWithUserId &&
-        file.uploadedBy.toString() === sharerId
-      ) {
-        req.flash("error", "You cannot share the file with yourself as the owner.");
-        return res.redirect(backTo);
-      }
-
-      const alreadyShared = file.sharedWith.find(
-        (s) => s.user.toString() === shareWithUserId
+    if (
+      shareWithUserId &&
+      shareWithUserId === sharerId &&
+      uploaderId === sharerId
+    ) {
+      req.flash(
+        "error",
+        `You cannot share the ${type} with yourself as the owner.`
       );
-      if (alreadyShared) {
-        req.flash("info", "File is already shared with this user.");
-        return res.redirect(backTo);
-      }
-
-      file.sharedWith.push({
-        user: shareWithUserId,
-        access,
-        sharedAt: new Date(),
-      });
-
-      await folder.save();
-      req.flash("success", "File shared successfully");
       return res.redirect(backTo);
     }
 
-    req.flash("error", "Invalid share type");
+    // Validate access level based on your schema
+    const validAccessValues = ["write", "NoDownload"];
+    const sanitizedAccess = validAccessValues.includes(access)
+      ? access
+      : "write"; // default to 'write' if invalid (since schema doesn't include 'read')
+
+    let shareDoc = await ShareModel.findOne({
+      folderId: type === "folder" ? folder._id : null,
+      fileId: type === "file" ? file._id : null,
+      sharedBy: sharerId,
+    });
+
+    const isAlreadyShared = shareDoc?.sharedWith?.some((entry) => {
+      return (
+        (shareWithUserId && entry.userId?.toString() === shareWithUserId) ||
+        (shareWithGroupId && entry.groupId?.toString() === shareWithGroupId)
+      );
+    });
+
+    if (isAlreadyShared) {
+      req.flash(
+        "info",
+        `${
+          type.charAt(0).toUpperCase() + type.slice(1)
+        } is already shared with this user/group.`
+      );
+      return res.redirect(backTo);
+    }
+
+    if (!shareDoc) {
+      shareDoc = new ShareModel({
+        fileId: type === "file" ? file._id : null,
+        folderId: type === "folder" ? folder._id : null,
+        sharedBy: sharerId,
+        sharedWith: [],
+      });
+    }
+
+    shareDoc.sharedWith.push({
+      ...(shareWithUserId ? { userId: shareWithUserId } : {}),
+      ...(shareWithGroupId ? { groupId: shareWithGroupId } : {}),
+      access: sanitizedAccess,
+      sharedAt: new Date(),
+    });
+
+    await shareDoc.save();
+
+    req.flash(
+      "success",
+      `${type.charAt(0).toUpperCase() + type.slice(1)} shared successfully.`
+    );
     return res.redirect(backTo);
   } catch (err) {
-    console.error(err);
-    req.flash("error", "Error sharing");
-    res.redirect(backTo);
+    console.error("Error in shareFilesFolder:", err);
+    req.flash("error", "An error occurred while sharing.");
+    return res.redirect(backTo);
   }
 };
 
-
-const getSharedWithMeFolders = async (req, res) => {
-  try {
-    const userId = req.session.userId;
-
-    // Folders shared with me
-    const sharedFolders = await FolderModel.find({
-      "sharedWith.user": userId,
-      uploadedBy: { $ne: userId },
-    })
-      .populate("uploadedBy")
-      .populate("sharedWith.user")
-      .populate("files.uploadedBy")
-      .populate("files.sharedWith.user");
-
-    // Folders where files are shared with me, even if the folder itself isn't
-    const fileSharedFolders = await FolderModel.find({
-      "files.sharedWith.user": userId,
-      uploadedBy: { $ne: userId },
-    })
-      .populate("uploadedBy")
-      .populate("files.uploadedBy")
-      .populate("files.sharedWith.user");
-
-    // Merge folders - avoid duplicates (if folder is in both sharedFolders & fileSharedFolders)
-    const allSharedFolderMap = new Map();
-
-    for (const folder of [...sharedFolders, ...fileSharedFolders]) {
-      allSharedFolderMap.set(folder._id.toString(), folder);
-    }
-
-    const allSharedFolders = Array.from(allSharedFolderMap.values());
-
-    // Manual population (if needed)
-    for (const folder of allSharedFolders) {
-      for (const file of folder.files) {
-        for (let i = 0; i < file.sharedWith.length; i++) {
-          const share = file.sharedWith[i];
-          if (share.user && share.user._id == null) {
-            share.user = await UserModel.findById(share.user).select("username email");
-          }
-        }
-        if (file.uploadedBy && file.uploadedBy._id == null) {
-          file.uploadedBy = await UserModel.findById(file.uploadedBy).select("username email");
-        }
-      }
-    }
-
-    // Folders I shared with others
-    const mySharedFolders = await FolderModel.find({
-      uploadedBy: userId,
-      sharedWith: { $exists: true, $not: { $size: 0 } },
-    })
-      .populate("sharedWith.user")
-      .populate("files.sharedWith.user");
-
-    // Manual population
-    for (const folder of mySharedFolders) {
-      for (const file of folder.files) {
-        for (let i = 0; i < file.sharedWith.length; i++) {
-          const share = file.sharedWith[i];
-          if (share.user && share.user._id == null) {
-            share.user = await UserModel.findById(share.user).select("username email");
-          }
-        }
-        if (file.uploadedBy && file.uploadedBy._id == null) {
-          file.uploadedBy = await UserModel.findById(file.uploadedBy).select("username email");
-        }
-      }
-    }
-
-    const user = await UserModel.findById(userId);
-    if (!user) {
-      req.flash("error", "User not found.");
-      return res.redirect("/upload");
-    }
-
-    res.render("sharing", {
-      sharedWithMe: allSharedFolders,
-      myShared: mySharedFolders,
-      getFileIcon,
-      userId,
-      user,
-      success: req.flash("success"),
-      error: req.flash("error"),
-    });
-  } catch (err) {
-    console.error(err);
-    req.flash("error", "Error fetching shared folders.");
-    res.redirect("/checking");
-  }
-};
-
-
+//controller to remove shared folder or file
 const removeSharedFolder = async (req, res) => {
-  const { itemId, itemType, userId, redirectUrl } = req.body;
+  const { itemId, itemType, userId, groupId, redirectUrl } = req.body;
   const backTo = decodeURIComponent(redirectUrl || "/checking");
 
   try {
-    if (itemType === 'folder') {
-      const folder = await FolderModel.findById(itemId);
-      if (!folder) {
-        req.flash('error', 'Folder not found');
-        return res.redirect(backTo);
-      }
-
-      folder.sharedWith = folder.sharedWith.filter(sw => sw.user.toString() !== userId);
-      await folder.save();
-
-    } else if (itemType === 'file') {
-      const folder = await FolderModel.findOne({ 'files._id': itemId });
-      if (!folder) {
-        req.flash('error', 'File not found');
-        return res.redirect(backTo);
-      }
-
-      const file = folder.files.id(itemId);
-      if (!file) {
-        req.flash('error', 'File not found in folder');
-        return res.redirect(backTo);
-      }
-
-      file.sharedWith = file.sharedWith.filter(sw => sw.user.toString() !== userId);
-      await folder.save();
+    // Validate input
+    if (!itemId || !itemType || (!userId && !groupId)) {
+      req.flash("error", "Invalid request parameters");
+      return res.redirect(backTo);
     }
 
-    req.flash("success", "Shared user removed successfully");
-    return res.redirect(backTo);
+    // Prepare base query depending on itemType
+    const query =
+      itemType === "folder"
+        ? { folderId: itemId }
+        : itemType === "file"
+        ? { fileId: itemId }
+        : null;
 
+    if (!query) {
+      req.flash("error", "Invalid item type");
+      return res.redirect(backTo);
+    }
+
+    // Pull the specific userId or groupId from sharedWith array
+    const pullQuery = {};
+    if (userId) pullQuery.userId = userId;
+    if (groupId) pullQuery.groupId = groupId;
+
+    await ShareModel.updateOne(query, {
+      $pull: { sharedWith: pullQuery },
+    });
+
+    // Optionally delete the ShareModel document if sharedWith is empty
+    const updatedShare = await ShareModel.findOne(query);
+    if (updatedShare && updatedShare.sharedWith.length === 0) {
+      await ShareModel.deleteOne(query);
+    }
+
+    req.flash("success", "Sharing access removed successfully");
+    return res.redirect(backTo);
   } catch (err) {
-    console.error("Error removing shared user:", err);
-    req.flash("error", "Server error occurred while removing shared user");
+    console.error("Error removing shared access:", err);
+    req.flash("error", "Server error occurred while removing access");
     return res.redirect(backTo);
   }
 };
-
 
 //function to get the user details of shared file and folder
 const shareUserDetails = async (req, res) => {
   const { type, id } = req.params;
+
   try {
-    let sharedUsers = [];
+    let shareDoc;
+
     if (type === "folder") {
-      const folder = await FolderModel.findById(id).populate(
-        "sharedWith.user",
-        "username department"
-      );
-      if (!folder)
-        return res
-          .status(404)
-          .json({ success: false, message: "Folder not found" });
-      sharedUsers = folder.sharedWith;
+      shareDoc = await ShareModel.findOne({ folderId: id }).lean();
     } else if (type === "file") {
-      const folder = await FolderModel.findOne({ "files._id": id });
-      if (!folder)
-        return res
-          .status(404)
-          .json({ success: false, message: "File not found" });
-
-      const file = folder.files.id(id);
-      if (!file)
-        return res
-          .status(404)
-          .json({ success: false, message: "File not found" });
-
-      const populatedSharedWith = await UserModel.find({
-        _id: { $in: file.sharedWith.map((sw) => sw.user) },
-      }).select("username department");
-
-      sharedUsers = file.sharedWith.map((entry) => ({
-        ...entry.toObject(),
-        user: populatedSharedWith.find(
-          (u) => u._id.toString() === entry.user.toString()
-        ),
-      }));
+      shareDoc = await ShareModel.findOne({ fileId: id }).lean();
+    } else {
+      return res.status(400).json({ success: false, message: "Invalid type" });
     }
-return res.json({ success: true, sharedWith: sharedUsers });
-   
+
+    if (!shareDoc) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Share data not found" });
+    }
+
+    const userIds = shareDoc.sharedWith
+      .filter((entry) => entry.userId)
+      .map((entry) => entry.userId);
+
+    const groupIds = shareDoc.sharedWith
+      .filter((entry) => entry.groupId)
+      .map((entry) => entry.groupId);
+
+    const users = await UserModel.find({ _id: { $in: userIds } }).select(
+      "name department"
+    );
+    const groups = await CommitteeGroup.find({ _id: { $in: groupIds } }).select(
+      "groupName"
+    );
+
+    const sharedWith = shareDoc.sharedWith.map((entry) => {
+      const user = users.find((u) => u._id.equals(entry.userId));
+      const group = groups.find((g) => g._id.equals(entry.groupId));
+
+      return {
+        user: user || null,
+        group: group || null,
+        access: entry.access,
+        sharedAt: entry.sharedAt,
+      };
+    });
+
+    return res.json({ success: true, sharedWith });
   } catch (err) {
-    console.error(err);
+    console.error("Error in shareUserDetails:", err);
     return res.status(500).json({ success: false, message: "Server error" });
   }
 };
+//controller to get all shared folders and files with the user
+
+// controllers/shareController.js
+const getSharedWithMeFolders = async (req, res) => {
+  try {
+    const user = req.session.userId?.toString();
+
+    if (!user) {
+      return res.status(401).send("Unauthorized");
+    }
+
+    const shares = await ShareModel.find({})
+      .populate("sharedBy", "name email")
+      .populate("sharedWith.userId", "name email")
+      .populate("sharedWith.groupId", "groupName members")
+      .lean();
+
+    const sharedItems = [];
+
+    for (const share of shares) {
+      const isFolder = !!share.folderId;
+      const isFile = !!share.fileId;
+
+      let itemData = null;
+      let type = null;
+
+      if (isFolder) {
+        itemData = await FolderModel.findById(share.folderId).lean();
+        type = "folder";
+      } else if (isFile) {
+        itemData = await FolderModel.findOne(
+          { "files._id": share.fileId },
+          { "files.$": 1, folderName: 1, createdBy: 1, department: 1 }
+        )
+          .populate("uploadedBy", "name")
+          .lean();
+
+        if (itemData?.files?.length > 0) {
+          itemData = {
+            ...itemData.files[0],
+            folderName: itemData.folderName,
+            parentId: itemData._id,
+          };
+          type = "file";
+        }
+      }
+
+      if (!itemData) continue;
+
+      // Check if the logged-in user is shared WITH (directly or group member)
+      const sharedToUser = share.sharedWith.some((sw) => {
+        const sharedWithUser = sw.userId?._id?.toString() === user;
+
+        const sharedWithGroupMember =
+          sw.groupId &&
+          Array.isArray(sw.groupId.members) &&
+          sw.groupId.members.map((m) => m.toString()).includes(user);
+
+        return sharedWithUser || sharedWithGroupMember;
+      });
+
+      // Check if logged-in user is the one who shared this
+      const sharedByUser = share.sharedBy?._id?.toString() === user;
+
+      // Show the item only if user is either the sharer or a recipient
+      if (sharedToUser || sharedByUser) {
+        let sharedWith = [];
+
+        if (sharedByUser) {
+          // Sharer sees all sharedWith entries
+          sharedWith = share.sharedWith.map((sw) => {
+            let recipient = "Unknown";
+            if (sw.groupId && sw.groupId.groupName) {
+              recipient = `${sw.groupId.groupName} (Group)`;
+            } else if (sw.userId && sw.userId.name) {
+              recipient = sw.userId.name;
+            }
+            return {
+              to: recipient,
+              access: sw.access,
+              sharedAt: sw.sharedAt,
+            };
+          });
+        } else {
+          // Recipients see only their relevant shares
+          sharedWith = share.sharedWith
+            .filter((sw) => {
+              const isUser = sw.userId?._id?.toString() === user;
+              const isGroupMember =
+                sw.groupId &&
+                Array.isArray(sw.groupId.members) &&
+                sw.groupId.members.map((m) => m.toString()).includes(user);
+              return isUser || isGroupMember;
+            })
+            .map((sw) => {
+              let recipient = "Unknown";
+              if (sw.groupId && sw.groupId.groupName) {
+                recipient = `${sw.groupId.groupName} (Group)`;
+              } else if (sw.userId && sw.userId.name) {
+                recipient = sw.userId.name;
+              }
+              return {
+                to: recipient,
+                access: sw.access,
+                sharedAt: sw.sharedAt,
+              };
+            });
+        }
+
+        sharedItems.push({
+          _id: isFolder ? share.folderId : share.fileId,
+          name: isFolder
+            ? itemData.folderName
+            : itemData.originalname || "Unnamed File",
+          type,
+          sharedBy: share.sharedBy?.name || "Unknown",
+          sharedWith,
+          parentId: isFile ? itemData.parentId : null,
+        });
+      }
+    }
+
+    res.render("sharing", {
+      sharedItems,
+      message:
+        sharedItems.length === 0
+          ? "No files or folders shared with you or shared by you."
+          : null,
+      user,
+      getFileIcon,
+    });
+  } catch (err) {
+    console.error("Error in getSharedItemsForUser:", err);
+    res.status(500).send("Server Error");
+  }
+};
+
+//View the share file
+const ShareFilesView = async (req, res) => {
+  const fileId = req.params.fileId;
+  const loggedInUserId = req.session.userId;
+  const client = new ftp.Client();
+
+  try {
+    const user = await UserModel.findById(loggedInUserId);
+    if (!user) return res.status(404).send("User not found");
+
+    const folder = await FolderModel.findOne({ "files._id": fileId }).populate(
+      "linkedFolder"
+    );
+    if (!folder) return res.status(404).send("File not found");
+
+    const file = folder.files.id(fileId);
+    if (!file) return res.status(404).send("File not found");
+
+    const folderPath = folder.linkedFolder?.path;
+    const folderDept = folder.linkedFolder?.department;
+
+    if (!folderPath || !folderDept)
+      return res.status(500).send("Folder path/department missing");
+
+    const ftpConfig = ftpCredentials[folderDept];
+    if (!ftpConfig)
+      return res
+        .status(404)
+        .send(`FTP config missing for department: ${folderDept}`);
+
+    const remoteFilePath = `/${folderPath}/${file.originalname}`;
+    const mimeType =
+      mime.lookup(file.originalname) || "application/octet-stream";
+
+    const share = await ShareModel.findOne({
+      file: fileId,
+      sharedTo: loggedInUserId,
+    });
+
+    const accessLevel = share?.access || "write"; // default to write
+
+    // FTP download
+    await client.access(ftpConfig);
+
+    const writableStream = new stream.PassThrough();
+    const fileBufferPromise = new Promise((resolve, reject) => {
+      const chunks = [];
+      writableStream.on("data", (chunk) => chunks.push(chunk));
+      writableStream.on("end", () => resolve(Buffer.concat(chunks)));
+      writableStream.on("error", reject);
+    });
+
+    await client.downloadTo(writableStream, remoteFilePath);
+    const fileBuffer = await fileBufferPromise;
+
+    if (mimeType === "application/pdf") {
+      const pdfDoc = await PDFDocument.load(fileBuffer, {
+        ignoreEncryption: true,
+      });
+      const newPdfDoc = await PDFDocument.create();
+      const pages = await newPdfDoc.copyPages(pdfDoc, pdfDoc.getPageIndices());
+      pages.forEach((page) => newPdfDoc.addPage(page));
+      const newBuffer = await newPdfDoc.save();
+
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader(
+        "Content-Disposition",
+        `inline; filename="${file.originalname}"`
+      );
+      return res.send(Buffer.from(newBuffer));
+    }
+
+    // For non-PDFs
+    res.setHeader("Content-Type", mimeType);
+    res.setHeader(
+      "Content-Disposition",
+      'inline; filename="' + file.originalname + '"'
+    );
+
+    if (accessLevel === "NoDownload") {
+      return res
+        .status(403)
+        .send("You do not have permission to download this file.");
+    }
+
+    return res.send(fileBuffer);
+  } catch (err) {
+    console.error("Error:", err);
+    if (!res.headersSent) res.status(500).send("Internal Server Error");
+  } finally {
+    client.close();
+  }
+};
+
+//based on share access level, return the file or folder
 
 module.exports = {
   shareFilesFolder,
   getSharedWithMeFolders,
   removeSharedFolder,
   shareUserDetails,
+  ShareFilesView,
 };

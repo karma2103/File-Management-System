@@ -1,9 +1,5 @@
 <%- include("./Layouts/header", { user: user})%>
 
-
-<!-- ==================================================== -->
-<!-- Start right Content here -->
-<!-- ==================================================== -->
 <div class="page-content">
 
   <!-- Start Container Fluid -->
@@ -28,6 +24,7 @@
       <div class="col-xxl-12">
         <div class="row">
 
+          <!-- Total Files -->
           <div class="col-md-6">
             <div class="card overflow-hidden">
               <div class="card-body">
@@ -36,20 +33,20 @@
                     <div class="avatar-md bg-primary bg-opacity-10 rounded-circle">
                       <iconify-icon icon="solar:cart-5-broken" class="avatar-title fs-32 text-primary"></iconify-icon>
                     </div>
-                  </div> <!-- end col -->
+                  </div>
                   <div class="col-6 text-end">
                     <p class="text-muted mb-0 text-truncate">Total No Of Files</p>
-                    <h3 class="text-dark mt-1 mb-0">15,432</h3>
-                  </div> <!-- end col -->
-                </div> <!-- end row-->
-
+                    <h3 class="text-dark mt-1 mb-0"><%= stats.totalFiles %></h3>
+                  </div>
+                </div>
                 <div dir="ltr" class="mt-4">
                   <div id="orders-chart" class="apex-charts"></div>
                 </div>
-              </div> <!-- end card body -->
-            </div> <!-- end card -->
-          </div> <!-- end col -->
+              </div>
+            </div>
+          </div>
 
+          <!-- Total Folders -->
           <div class="col-md-6">
             <div class="card overflow-hidden">
               <div class="card-body">
@@ -58,19 +55,20 @@
                     <div class="avatar-md bg-success bg-opacity-10 rounded-circle">
                       <iconify-icon icon="solar:leaf-broken" class="avatar-title fs-32 text-success"></iconify-icon>
                     </div>
-                  </div> <!-- end col -->
+                  </div>
                   <div class="col-6 text-end">
                     <p class="text-muted mb-0 text-truncate">Total No Of Folders</p>
-                    <h3 class="text-dark mt-1 mb-0">12,983</h3>
-                  </div> <!-- end col -->
-                </div> <!-- end row-->
+                    <h3 class="text-dark mt-1 mb-0"><%= stats.totalFolders %></h3>
+                  </div>
+                </div>
                 <div dir="ltr" class="mt-4">
                   <div id="new-leads-chart" class="apex-charts"></div>
                 </div>
-              </div> <!-- end card body -->
-            </div> <!-- end card -->
-          </div> <!-- end col -->
+              </div>
+            </div>
+          </div>
 
+          <!-- Total Files Shared -->
           <div class="col-md-6">
             <div class="card overflow-hidden">
               <div class="card-body">
@@ -79,19 +77,20 @@
                     <div class="avatar-md bg-success bg-opacity-10 rounded-circle">
                       <iconify-icon icon="solar:hand-shake-broken" class="avatar-title fs-32 text-success"></iconify-icon>
                     </div>
-                  </div> <!-- end col -->
+                  </div>
                   <div class="col-6 text-end">
-                    <p class="text-muted mb-0 text-truncate">Deals</p>
-                    <h3 class="text-dark mt-1 mb-0">1,283</h3>
-                  </div> <!-- end col -->
-                </div> <!-- end row-->
+                    <p class="text-muted mb-0 text-truncate">Total Files Shared</p>
+                    <h3 class="text-dark mt-1 mb-0"><%= stats.sharedFiles %></h3>
+                  </div>
+                </div>
                 <div dir="ltr" class="mt-4">
                   <div id="deals-chart" class="apex-charts"></div>
                 </div>
-              </div> <!-- end card body -->
-            </div> <!-- end card -->
-          </div> <!-- end col -->
+              </div>
+            </div>
+          </div>
 
+          <!-- Total Folders Shared -->
           <div class="col-md-6">
             <div class="card overflow-hidden">
               <div class="card-body">
@@ -100,18 +99,19 @@
                     <div class="avatar-md bg-primary bg-opacity-10 rounded-circle">
                       <iconify-icon icon="solar:money-bag-broken" class="avatar-title fs-32 text-primary"></iconify-icon>
                     </div>
-                  </div> <!-- end col -->
+                  </div>
                   <div class="col-6 text-end">
-                    <p class="text-muted mb-0 text-truncate">Booked Revenue</p>
-                    <h3 class="text-dark mt-1 mb-0">$234.8k</h3>
-                  </div> <!-- end col -->
-                </div> <!-- end row-->
+                    <p class="text-muted mb-0 text-truncate">Total Folder Shared</p>
+                    <h3 class="text-dark mt-1 mb-0"><%= stats.sharedFolders %></h3>
+                  </div>
+                </div>
                 <div dir="ltr" class="mt-4">
                   <div id="booked-revenue-chart" class="apex-charts"></div>
                 </div>
-              </div> <!-- end card body -->
-            </div> <!-- end card -->
-          </div> <!-- end col -->
+              </div>
+            </div>
+          </div>
+
         </div> <!-- end row -->
       </div> <!-- end col -->
     </div> <!-- end row -->

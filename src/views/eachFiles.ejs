@@ -85,7 +85,7 @@
                       <a href="/files/<%= file._id %>" target="_blank"><%= file.originalname %></a>
                     </td>
                     <td><%= new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(file.date)) %></td>
-                    <td><%= file.uploadedBy ? file.uploadedBy.username : 'Unknown' %></td>
+                    <td><%= file.uploadedBy ? file.uploadedBy.name : 'Unknown' %></td>
                     <td><%= formatFileSize(file.size) %></td>
                     <td><%= file.uploadedBy ? file.uploadedBy.department : 'Unknown' %></td>
                     <td>

@@ -14,7 +14,13 @@ const AddGroupMembers = async (req, res) => {
     let { groupName, memberSecretary, members } = req.body;
     // Ensure members is always an array
     if (!Array.isArray(members)) members = [members];
+    const user = await UserModel.findById(req.session.userId);
 
+    const existingGroup = await CommitteeGroup.findOne({ groupName });
+    if (existingGroup) {
+      req.flash("success", "Group or Committee Already Exists.");
+      return res.redirect("/addCommittee");
+    }
     // Validate presence
     if (!groupName || !memberSecretary || members.length === 0) {
       return res.status(400).send("All fields are required");
@@ -25,14 +31,8 @@ const AddGroupMembers = async (req, res) => {
       memberSecretary,
       members,
     });
-
     await newCommittee.save();
-
-    const user = await UserModel.findById(req.session.userId);
-    res.render("ViewGroups", {
-      user,
-      message: "Committee created successfully",
-    });
+    res.redirect("/committees");
   } catch (error) {
     console.error("Error creating committee:", error);
     res.status(500).send("Internal Server Error");
@@ -46,11 +46,11 @@ const ViewCommittee = async (req, res) => {
     const groups = await CommitteeGroup.find()
       .populate("memberSecretary", "name department")
       .populate("members", "name department");
-
+    
     res.render("ViewGroups", {
-      user,
-      groups,
-      allUsers,
+      user: user || null,
+      groups: groups || [],
+      allUsers: allUsers || [],
     });
   } catch (error) {
     console.error("Error fetching groups:", error);
@@ -67,13 +67,10 @@ const editGroup = async (req, res) => {
     const group = await CommitteeGroup.findById(groupId)
       .populate("memberSecretary")
       .populate("members");
-
     const users = await UserModel.find(); // for dropdowns
-
     if (!group) {
       return res.status(404).send("Committee Group not found");
     }
-
     res.render("EditGroup", {
       group,
       users,
@@ -106,7 +103,7 @@ const postEditGroup = async (req, res) => {
     if (!updatedGroup) {
       return res.status(404).send("Committee Group not found");
     }
-
+     req.flash("success", "Group details successfully Updated.");
     res.redirect("/committees");
   } catch (err) {
     console.error(err);

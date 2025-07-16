@@ -51,7 +51,7 @@ let routes = app => {
   router.post('/api/v1/login', APIController.authLogin);
   router.get("/password", AuthController.GetAuth )
   router.get("/logout",loginController.logout); 
-
+  
   //add Committees
   router.post('/AddGroup', requireAuth, CommitteeController.AddGroupMembers);
   router.get('/committees', requireAuth, CommitteeController.ViewCommittee);

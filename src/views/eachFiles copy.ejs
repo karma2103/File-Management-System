@@ -110,9 +110,9 @@
                         <button type="button" class="btn btn-soft-primary btn-sm open-share-modal" data-id="<%= item._id %>" data-type="folder" data-name="<%= item.folderName || 'Unnamed Folder' %>">
                           <iconify-icon icon="majesticons:share-line" class="align-middle fs-18"></iconify-icon>
                         </button>
-                        <a href="#!" class="btn btn-soft-danger btn-sm">
+                        <!-- <a href="#!" class="btn btn-soft-danger btn-sm">
                           <iconify-icon icon="solar:trash-bin-minimalistic-2-broken" class="align-middle fs-18"></iconify-icon>
-                        </a>
+                        </a> -->
                       </div>
                     </td>
                   </tr>
@@ -152,9 +152,9 @@
                         <button type="button" class="btn btn-soft-primary btn-sm open-share-modal" data-id="<%= file._id %>" data-type="file" data-name="<%= file.originalname %>">
                           <iconify-icon icon="majesticons:share-line" class="align-middle fs-18"></iconify-icon>
                         </button>
-                        <a href="#!" class="btn btn-soft-danger btn-sm">
+                        <!-- <a href="#!" class="btn btn-soft-danger btn-sm">
                           <iconify-icon icon="solar:trash-bin-minimalistic-2-broken" class="align-middle fs-18"></iconify-icon>
-                        </a>
+                        </a> -->
                       </div>
                     </td>
                   </tr>
@@ -213,6 +213,9 @@
               <li class="nav-item" role="presentation">
                 <button class="nav-link" id="group-tab" data-bs-toggle="tab" data-bs-target="#group" type="button" role="tab" aria-controls="group" aria-selected="false">Group</button>
               </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="all-tab" data-bs-toggle="tab" data-bs-target="#all" type="button" role="tab" aria-controls="all" aria-selected="false">All</button>
+              </li>
             </ul>
 
             <div class="tab-content mt-3" id="shareTabsContent">
@@ -222,7 +225,7 @@
                   <label for="shareWithUserId" class="form-label">Share With User</label>
                   <select name="shareWithUserId" id="shareWithUserId" class="form-select" required>
                     <% (allUsers || []).forEach(function(u) { %>
-                    <option value="<%= u._id %>"><%= u.department %> (<%= u.name %>)</option>
+                    <option value="<%= u._id %>"><%= u.name %> - <%= u.department %> </option>
                     <% }) %>
                   </select>
                 </div>
@@ -239,9 +242,19 @@
                   </select>
                 </div>
               </div>
+
+              <!-- All Share Tab - MOVED INSIDE shareTabsContent -->
+              <div class="tab-pane fade" id="all" role="tabpanel" aria-labelledby="all-tab">
+                <div class="form-check mt-3">
+                  <input class="form-check-input" type="checkbox" id="shareToAll" name="shareToAll" value="true" />
+                  <label class="form-check-label" for="shareToAll">
+                    Share with all users
+                  </label>
+                </div>
+              </div>
             </div>
 
-             <div class="mb-3">
+            <div class="mb-3">
               <label for="access" class="form-label">Access Level</label>
               <select name="access" id="access" class="form-select" required onchange="updateAccessNote()">
                 <option value="read">View</option>
@@ -262,22 +275,22 @@
     </div>
   </div>
 
-<script>
-  function updateAccessNote() {
-    const accessSelect = document.getElementById('access');
-    const accessNote = document.getElementById('access-note');
-    const selectedValue = accessSelect.value;
+  <script>
+    function updateAccessNote() {
+      const accessSelect = document.getElementById('access');
+      const accessNote = document.getElementById('access-note');
+      const selectedValue = accessSelect.value;
 
-    if (selectedValue === 'read') {
-      accessNote.textContent = 'Can view and download.';
-    } else if (selectedValue === 'NoDownload') {
-      accessNote.textContent = 'Can view but cannot download.';
+      if (selectedValue === 'read') {
+        accessNote.textContent = 'Can view and download.';
+      } else if (selectedValue === 'NoDownload') {
+        accessNote.textContent = 'Can view but cannot download.';
+      }
     }
-  }
 
-  // Optional: Call once on page load in case value is pre-selected
-  document.addEventListener('DOMContentLoaded', updateAccessNote);
-</script>
+    // Optional: Call once on page load in case value is pre-selected
+    document.addEventListener('DOMContentLoaded', updateAccessNote);
+  </script>
   <!-- Manage Access Modal -->
   <div id="accessModal" class="modal" tabindex="-1" aria-labelledby="accessModalLabel" aria-hidden="true" style="display:none;">
     <div class="modal-dialog">
@@ -399,79 +412,168 @@
     });
   </script>
   <!-- access model -->
-  <script>
-    const accessModal = document.getElementById('accessModal');
-    const accessModalClose = document.getElementById('accessModalClose');
-    const accessModalCancel = document.getElementById('accessModalCancel');
-    const accessItemName = document.getElementById('accessItemName');
-    const sharedUsersList = document.getElementById('sharedUsersList');
+ <script>
+  const accessModal = document.getElementById('accessModal');
+  const accessModalClose = document.getElementById('accessModalClose');
+  const accessModalCancel = document.getElementById('accessModalCancel');
+  const accessItemName = document.getElementById('accessItemName');
+  const sharedUsersList = document.getElementById('sharedUsersList');
 
-    function openStopShareModel(itemId, itemType, itemName) {
-      accessItemName.textContent = `${itemType.charAt(0).toUpperCase() + itemType.slice(1)}: ${itemName}`;
-      sharedUsersList.innerHTML = '<li class="list-group-item text-muted">Loading...</li>';
+  let toggleUserListVisible = false;
 
-      fetch(`/shared-users/${itemType}/${itemId}`)
-        .then(response => response.json())
-        .then(data => {
-          sharedUsersList.innerHTML = '';
+  function openStopShareModel(itemId, itemType, itemName) {
+    accessItemName.textContent = `${itemType.charAt(0).toUpperCase() + itemType.slice(1)}: ${itemName}`;
+    sharedUsersList.innerHTML = '<li class="list-group-item text-muted">Loading...</li>';
 
-          if (data.success && Array.isArray(data.sharedWith) && data.sharedWith.length > 0) {
-            data.sharedWith.forEach(entry => {
-              const li = document.createElement('li');
-              li.className = 'list-group-item d-flex justify-content-between align-items-center';
+    fetch(`/shared-users/${itemType}/${itemId}`)
+      .then(response => response.json())
+      .then(data => {
+        sharedUsersList.innerHTML = '';
 
-              let label = '';
-              let hiddenInputs = '';
+        if (!data.success) {
+          sharedUsersList.innerHTML = '<li class="list-group-item text-danger">No sharing records found.</li>';
+          return;
+        }
 
-              if (entry.user) {
-                label = `User: ${entry.user.name})`;
-                hiddenInputs += `<input type="hidden" name="userId" value="${entry.user._id}">`;
-              } else if (entry.group) {
-                label = `Group: ${entry.group.groupName}`;
-                hiddenInputs += `<input type="hidden" name="groupId" value="${entry.group._id}">`;
-              }
-
-              hiddenInputs += `
-            <input type="hidden" name="itemId" value="${itemId}">
-            <input type="hidden" name="itemType" value="${itemType}">
-            <input type="hidden" name="redirectUrl" value="${encodeURIComponent(window.location.pathname + window.location.search)}">
-          `;
-
-              li.innerHTML = `
-            <span>${label} — <em>${entry.access}</em></span>
-            <form method="POST" action="/stop-share" class="d-inline">
-              ${hiddenInputs}
-              <button type="submit" class="btn btn-sm btn-danger">Stop Sharing</button>
+        // Shared with Everyone
+        if (data.shareToAll) {
+          const shareToAllLi = document.createElement('li');
+          shareToAllLi.className = 'list-group-item d-flex justify-content-between align-items-center bg-light';
+          shareToAllLi.innerHTML = `
+            <span><strong>📢 Shared with Everyone</strong></span>
+            <form method="POST" action="/stop-share" class="d-inline" onsubmit="return confirm('Are you sure you want to stop sharing with everyone?');">
+              <input type="hidden" name="itemId" value="${itemId}">
+              <input type="hidden" name="itemType" value="${itemType}">
+              <input type="hidden" name="stopShareToAll" value="true">
+              <input type="hidden" name="redirectUrl" value="${encodeURIComponent(window.location.pathname + window.location.search)}">
+              <button type="submit" class="btn btn-sm btn-warning">Stop Share to All</button>
             </form>
           `;
+          sharedUsersList.appendChild(shareToAllLi);
+        }
 
-              sharedUsersList.appendChild(li);
-            });
-          } else {
-            sharedUsersList.innerHTML = '<li class="list-group-item text-danger">No sharing records found.</li>';
-          }
-        })
-        .catch(error => {
-          console.error('Error fetching shared users:', error);
-          sharedUsersList.innerHTML = '<li class="list-group-item text-danger">Failed to load shared data.</li>';
-        });
+        // Shared with specific users/groups
+        if (Array.isArray(data.sharedWith) && data.sharedWith.length > 0) {
+          // Controls (Select All, Deselect All, Stop Sharing Selected)
+          const controlsLi = document.createElement('li');
+          controlsLi.className = 'list-group-item d-flex justify-content-between align-items-center';
+          controlsLi.innerHTML = `
+            <div>
+              <button type="button" class="btn btn-sm btn-secondary me-2" onclick="selectAllCheckboxes(true)">Select All</button>
+              <button type="button" class="btn btn-sm btn-secondary me-2" onclick="selectAllCheckboxes(false)">Deselect All</button>
+              <button type="submit" class="btn btn-sm btn-danger" form="bulkStopShareForm" onclick="return confirm('Are you sure you want to stop sharing with selected users/groups?')">
+                Stop Sharing Selected
+              </button>
+            </div>
+          `;
+          sharedUsersList.appendChild(controlsLi);
 
-      accessModal.style.display = 'block';
+          // Show/Hide toggle button
+          const toggleLi = document.createElement('li');
+          toggleLi.className = 'list-group-item';
+          toggleLi.innerHTML = `
+            <button type="button" class="btn btn-sm btn-outline-primary" onclick="toggleUserList()">Show Users</button>
+          `;
+          sharedUsersList.appendChild(toggleLi);
+
+          // User list wrapper (initially hidden)
+          const userListWrapper = document.createElement('ul');
+          userListWrapper.id = 'userListWrapper';
+          userListWrapper.style.display = 'none';
+          userListWrapper.className = 'list-group mt-2';
+
+          // Create bulk stop share form
+          const bulkForm = document.createElement('form');
+          bulkForm.method = 'POST';
+          bulkForm.action = '/stop-share';
+          bulkForm.id = 'bulkStopShareForm';
+
+          // Hidden inputs common to all checkboxes in this form
+          bulkForm.appendChild(createHiddenInput('itemId', itemId));
+          bulkForm.appendChild(createHiddenInput('itemType', itemType));
+          bulkForm.appendChild(createHiddenInput('stopShareToAll', 'true'));
+          bulkForm.appendChild(createHiddenInput('redirectUrl', encodeURIComponent(window.location.pathname + window.location.search)));
+
+          // Add each user/group checkbox
+          data.sharedWith.forEach(entry => {
+            const li = document.createElement('li');
+            li.className = 'list-group-item d-flex justify-content-between align-items-center';
+
+            let label = '';
+            let checkboxValue = '';
+
+            if (entry.user) {
+              label = `👤 User: ${entry.user.name} (${entry.user.department || 'N/A'})`;
+              checkboxValue = `user-${entry.user._id}`;
+            } else if (entry.group) {
+              label = `👥 Group: ${entry.group.groupName}`;
+              checkboxValue = `group-${entry.group._id}`;
+            }
+
+            li.innerHTML = `
+              <div class="form-check">
+                <input class="form-check-input bulk-checkbox" type="checkbox" name="selected[]" value="${checkboxValue}" id="chk-${checkboxValue}">
+                <label class="form-check-label" for="chk-${checkboxValue}">
+                  ${label} — <em class="text-muted">${entry.access}</em>
+                </label>
+              </div>
+            `;
+
+            bulkForm.appendChild(li);
+          });
+
+          userListWrapper.appendChild(bulkForm);
+          sharedUsersList.appendChild(userListWrapper);
+        }
+
+        if ((!data.sharedWith || data.sharedWith.length === 0) && !data.shareToAll) {
+          sharedUsersList.innerHTML = '<li class="list-group-item text-muted">No sharing records found.</li>';
+        }
+      })
+      .catch(error => {
+        console.error('Error fetching shared users:', error);
+        sharedUsersList.innerHTML = '<li class="list-group-item text-danger">Failed to load shared data.</li>';
+      });
+
+    accessModal.style.display = 'block';
+  }
+
+  function createHiddenInput(name, value) {
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = name;
+    input.value = value;
+    return input;
+  }
+
+  function toggleUserList() {
+    const wrapper = document.getElementById('userListWrapper');
+    const toggleBtn = sharedUsersList.querySelector('button.btn-outline-primary');
+    toggleUserListVisible = !toggleUserListVisible;
+    wrapper.style.display = toggleUserListVisible ? 'block' : 'none';
+    toggleBtn.textContent = toggleUserListVisible ? 'Hide Users' : 'Show Users';
+  }
+
+  function selectAllCheckboxes(select) {
+    const checkboxes = document.querySelectorAll('.bulk-checkbox');
+    checkboxes.forEach(cb => cb.checked = select);
+  }
+
+  function closeAccessModal() {
+    accessModal.style.display = 'none';
+    toggleUserListVisible = false;
+  }
+
+  accessModalClose.addEventListener('click', closeAccessModal);
+  accessModalCancel.addEventListener('click', closeAccessModal);
+
+  window.addEventListener('click', (e) => {
+    if (e.target === accessModal) {
+      closeAccessModal();
     }
+  });
+</script>
 
-    function closeAccessModal() {
-      accessModal.style.display = 'none';
-    }
-
-    accessModalClose.addEventListener('click', closeAccessModal);
-    accessModalCancel.addEventListener('click', closeAccessModal);
-
-    window.addEventListener('click', (e) => {
-      if (e.target === accessModal) {
-        closeAccessModal();
-      }
-    });
-  </script>
 
   <!-- search functionlity  -->
   <script>
@@ -506,9 +608,6 @@
       filterRows(); // Initial call to set correct state
     });
   </script>
-
-
- 
 
 
   <%- include("./Layouts/footer") %>

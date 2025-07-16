@@ -62,15 +62,25 @@ function getFileIcon(fileName) {
 }
 //controller to share files and folders
 const shareFilesFolder = async (req, res) => {
-  const { id, access, shareWithUserId, shareWithGroupId, type, redirectUrl } =
-    req.body;
+  const {
+    id,
+    access,
+    shareWithUserId,
+    shareWithGroupId,
+    type,
+    redirectUrl,
+    shareToAll,
+  } = req.body;
 
   const backTo = redirectUrl || "/checking";
   const sharerId = req.session.userId;
 
   try {
-    if (!shareWithUserId && !shareWithGroupId) {
-      req.flash("error", "Please select a user or group to share with.");
+    if (!shareToAll && !shareWithUserId && !shareWithGroupId) {
+      req.flash(
+        "error",
+        "Please select a user, group, or choose to share with all."
+      );
       return res.redirect(backTo);
     }
 
@@ -102,6 +112,7 @@ const shareFilesFolder = async (req, res) => {
         : file.uploadedBy?.toString();
 
     if (
+      !shareToAll &&
       shareWithUserId &&
       shareWithUserId === sharerId &&
       uploaderId === sharerId
@@ -113,11 +124,10 @@ const shareFilesFolder = async (req, res) => {
       return res.redirect(backTo);
     }
 
-    // Validate access level based on your schema
     const validAccessValues = ["write", "NoDownload"];
     const sanitizedAccess = validAccessValues.includes(access)
       ? access
-      : "write"; // default to 'write' if invalid (since schema doesn't include 'read')
+      : "write";
 
     let shareDoc = await ShareModel.findOne({
       folderId: type === "folder" ? folder._id : null,
@@ -125,41 +135,79 @@ const shareFilesFolder = async (req, res) => {
       sharedBy: sharerId,
     });
 
-    const isAlreadyShared = shareDoc?.sharedWith?.some((entry) => {
-      return (
-        (shareWithUserId && entry.userId?.toString() === shareWithUserId) ||
-        (shareWithGroupId && entry.groupId?.toString() === shareWithGroupId)
-      );
-    });
-
-    if (isAlreadyShared) {
-      req.flash(
-        "info",
-        `${
-          type.charAt(0).toUpperCase() + type.slice(1)
-        } is already shared with this user/group.`
-      );
-      return res.redirect(backTo);
-    }
-
     if (!shareDoc) {
       shareDoc = new ShareModel({
         fileId: type === "file" ? file._id : null,
         folderId: type === "folder" ? folder._id : null,
         sharedBy: sharerId,
         sharedWith: [],
+        shareToAll: false, // ✅ Fixed: Match schema field name
       });
     }
 
-    shareDoc.sharedWith.push({
-      ...(shareWithUserId ? { userId: shareWithUserId } : {}),
-      ...(shareWithGroupId ? { groupId: shareWithGroupId } : {}),
-      access: sanitizedAccess,
-      sharedAt: new Date(),
-    });
+    if (shareToAll === "true" || shareToAll === true) {
+      if (shareDoc.shareToAll) {
+        // ✅ Fixed: Match schema field name
+        req.flash(
+          "info",
+          `${
+            type.charAt(0).toUpperCase() + type.slice(1)
+          } is already shared with everyone.`
+        );
+        return res.redirect(backTo);
+      }
 
+      const allUsers = await UserModel.find({ _id: { $ne: sharerId } });
+
+      allUsers.forEach((user) => {
+        const alreadyShared = shareDoc.sharedWith.some(
+          (entry) => entry.userId?.toString() === user._id.toString()
+        );
+
+        if (!alreadyShared) {
+          shareDoc.sharedWith.push({
+            userId: user._id,
+            access: sanitizedAccess,
+            sharedAt: new Date(),
+          });
+        }
+      });
+
+      shareDoc.shareToAll = true; // ✅ Fixed: Match schema field name
+    } else if (shareWithUserId || shareWithGroupId) {
+      // Check if already shared with this user/group
+      const isAlreadyShared = shareDoc.sharedWith?.some((entry) => {
+        return (
+          (shareWithUserId && entry.userId?.toString() === shareWithUserId) ||
+          (shareWithGroupId && entry.groupId?.toString() === shareWithGroupId)
+        );
+      });
+
+      if (isAlreadyShared) {
+        req.flash(
+          "info",
+          `${
+            type.charAt(0).toUpperCase() + type.slice(1)
+          } is already shared with this user/group.`
+        );
+        return res.redirect(backTo);
+      }
+
+      // Add new share entry
+      shareDoc.sharedWith.push({
+        ...(shareWithUserId ? { userId: shareWithUserId } : {}),
+        ...(shareWithGroupId ? { groupId: shareWithGroupId } : {}),
+        access: sanitizedAccess,
+        sharedAt: new Date(),
+      });
+    }
+
+    // ✅ Ensure Mongoose recognizes the change
+    shareDoc.markModified("shareToAll");
     await shareDoc.save();
 
+    // ✅ Verify the save worked
+    const savedDoc = await ShareModel.findById(shareDoc._id);
     req.flash(
       "success",
       `${type.charAt(0).toUpperCase() + type.slice(1)} shared successfully.`
@@ -172,19 +220,26 @@ const shareFilesFolder = async (req, res) => {
   }
 };
 
-//controller to remove shared folder or file
+// Keep the original controller for backward compatibility
 const removeSharedFolder = async (req, res) => {
-  const { itemId, itemType, userId, groupId, redirectUrl } = req.body;
+  const {
+    itemId,
+    itemType,
+    userId,
+    groupId,
+    selected = [], // comes from bulk stop share checkboxes
+    stopShareToAll,
+    redirectUrl,
+  } = req.body;
   const backTo = decodeURIComponent(redirectUrl || "/checking");
-
   try {
-    // Validate input
-    if (!itemId || !itemType || (!userId && !groupId)) {
+    // Validate base input
+    if (!itemId || !itemType) {
       req.flash("error", "Invalid request parameters");
       return res.redirect(backTo);
     }
 
-    // Prepare base query depending on itemType
+    // Prepare query for ShareModel
     const query =
       itemType === "folder"
         ? { folderId: itemId }
@@ -197,7 +252,59 @@ const removeSharedFolder = async (req, res) => {
       return res.redirect(backTo);
     }
 
-    // Pull the specific userId or groupId from sharedWith array
+    // Stop sharing with everyone
+    // Stop sharing with everyone
+    if (stopShareToAll === "true" || stopShareToAll === true) {
+      // Check if document exists before update
+      await ShareModel.findOne(query);
+      // Perform the update
+      await ShareModel.findOneAndUpdate(query, {
+        $set: { shareToAll: false, upsert: true  },
+      });
+
+      // Check the document after update
+      await ShareModel.findOne(query);
+      req.flash("success", "Stopped sharing with everyone.");
+      return res.redirect(backTo);
+    }
+
+    // Bulk Stop Sharing (selected[])
+    if (Array.isArray(selected) && selected.length > 0) {
+      const pullConditions = selected
+        .map((id) => {
+          const [type, val] = id.split("-");
+          return type === "user"
+            ? { userId: val }
+            : type === "group"
+            ? { groupId: val }
+            : null;
+        })
+        .filter(Boolean); // Remove invalid
+
+      for (const cond of pullConditions) {
+        await ShareModel.updateOne(query, { $pull: { sharedWith: cond } });
+      }
+
+      // Check if the doc should be deleted
+      const updatedDoc = await ShareModel.findOne(query);
+      if (
+        updatedDoc &&
+        updatedDoc.sharedWith.length === 0 &&
+        updatedDoc.shareToAll !== true
+      ) {
+        await ShareModel.deleteOne(query);
+      }
+
+      req.flash("success", "Selected access removed successfully.");
+      return res.redirect(backTo);
+    }
+
+    // Individual user or group removal
+    if (!userId && !groupId) {
+      req.flash("error", "Invalid request parameters");
+      return res.redirect(backTo);
+    }
+
     const pullQuery = {};
     if (userId) pullQuery.userId = userId;
     if (groupId) pullQuery.groupId = groupId;
@@ -206,9 +313,12 @@ const removeSharedFolder = async (req, res) => {
       $pull: { sharedWith: pullQuery },
     });
 
-    // Optionally delete the ShareModel document if sharedWith is empty
     const updatedShare = await ShareModel.findOne(query);
-    if (updatedShare && updatedShare.sharedWith.length === 0) {
+    if (
+      updatedShare &&
+      updatedShare.sharedWith.length === 0 &&
+      !updatedShare.shareToAll
+    ) {
       await ShareModel.deleteOne(query);
     }
 

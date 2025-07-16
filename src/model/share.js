@@ -14,6 +14,14 @@ const ShareSchema = new mongoose.Schema({
       sharedAt: { type: Date, default: Date.now },
     },
   ],
+  shareToAll : { type: Boolean, default: false },
+  sharedAt: { type: Date, default: Date.now },
+   downloadedBy: [
+    {
+      userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+      downloadedAt: { type: Date, default: Date.now },
+    },
+  ],
 });
 
 module.exports = mongoose.model("Share", ShareSchema);

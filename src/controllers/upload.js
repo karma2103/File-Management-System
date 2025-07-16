@@ -7,8 +7,7 @@ require("dotenv").config();
 const Folder = require("../model/folder");
 const mime = require("mime-types");
 const Share = require("../model/share");
-const stream = require('stream');
-
+const stream = require("stream");
 
 const ftpCredentials = {
   Finance: {
@@ -31,7 +30,58 @@ const ftpCredentials = {
     user: process.env.FTP_USER_PPF_GF,
     password: process.env.FTP_PASSWORD_PPF_GF,
   },
+  "Information Technology": {
+    host: process.env.FTP_HOST_IT,
+    user: process.env.FTP_USER_IT,
+    password: process.env.FTP_PASSWORD_IT,
+  },
+  HRAD: {
+    host: process.env.FTP_HOST_HRAD,
+    user: process.env.FTP_USER_HRAD,
+    password: process.env.FTP_PASSWORD_HRAD,
+  },
+  "Credit & Investment": {
+    host: process.env.FTP_HOST_CREDIT,
+    user: process.env.FTP_USER_CREDIT,
+    password: process.env.FTP_PASSWORD_CREDIT,
+  },
+  Management: {
+    host: process.env.FTP_HOST_MANAGEMENT,
+    user: process.env.FTP_USER_MANAGEMENT,
+    password: process.env.FTP_PASSWORD_MANAGEMENT,
+  },
+  "Internal Audit": {
+    host: process.env.FTP_HOST_AUDIT,
+    user: process.env.FTP_USER_AUDIT,
+    password: process.env.FTP_PASSWORD_AUDIT,
+  },
+  "Company Secretary": {
+    host: process.env.FTP_HOST_SECRETARY,
+    user: process.env.FTP_USER_SECRETARY,
+    password: process.env.FTP_PASSWORD_SECRETARY,
+  },
+  Marketing: {
+    host: process.env.FTP_HOST_MARKETING,
+    user: process.env.FTP_USER_MARKETING,
+    password: process.env.FTP_PASSWORD_MARKETING,
+  },
+  Compliance: {
+    host: process.env.FTP_HOST_COMPLIANCE,
+    user: process.env.FTP_USER_COMPLIANCE,
+    password: process.env.FTP_PASSWORD_COMPLIANCE,
+  },
+  "Corporate Strategy & Business Development": {
+    host: process.env.FTP_HOST_CSBD,
+    user: process.env.FTP_USER_CSBD,
+    password: process.env.FTP_PASSWORD_CSBD,
+  },
+  Branch: {
+    host: process.env.FTP_HOST_BRANCH,
+    user: process.env.FTP_USER_BRANCH,
+    password: process.env.FTP_PASSWORD_BRANCH,
+  },
 };
+
 const multipleUpload = async (req, res) => {
   try {
     const folderID = await handleFileUpload(req);
@@ -207,58 +257,6 @@ const getFolderContents = async (req, res) => {
   }
 };
 
-// const getFileFromQNAP = async (req, res) => {
-//   const fileId = req.params.fileId;
-//   const loggedInUserId = req.session.userId;
-
-//   try {
-//     // Fetch user and folder from the database
-//     const user = await UserModel.findById(loggedInUserId);
-//     if (!user) return res.status(404).send("User not found");
-
-//     const department = user.department;
-//     const ftpConfig = ftpCredentials[department];
-//     if (!ftpConfig) return res.status(404).send("Department not configured");
-
-//     // Find the file details in the database
-//     const folder = await FolderModel.findOne({ "files._id": fileId });
-//     if (!folder) return res.status(404).send("File not found in database");
-
-//     const file = folder.files.id(fileId);
-//     if (!file) return res.status(404).send("File not found");
-
-//     // Construct file path on QNAP
-//     const remoteFilePath = `/${department}/${file.originalname}`.trim();
-
-//     console.log(`Downloading file: ${remoteFilePath}`);
-
-//     // Create FTP client and download file
-//     const client = new ftp.Client();
-//     await client.access(ftpConfig);
-
-//     res.setHeader(
-//       "Content-Disposition",
-//       `attachment; filename="${file.originalname}"`
-//     );
-//     res.setHeader("Content-Type", file.mimetype || "application/octet-stream");
-
-//     await client
-//       .downloadTo(res, remoteFilePath)
-//       .then(() => {
-//         console.log("File downloaded successfully");
-//         client.close();
-//       })
-//       .catch((err) => {
-//         console.error("Error downloading file:", err);
-//         client.close();
-//         if (!res.headersSent) res.status(500).send("Error downloading file");
-//       });
-//   } catch (err) {
-//     console.error("Error retrieving file:", err);
-//     if (!res.headersSent) res.status(500).send("Internal Server Error");
-//   }
-// };
-
 const createFolder = async (req, res) => {
   const client = new ftp.Client();
   client.ftp.verbose = true;
@@ -314,8 +312,7 @@ const createFolder = async (req, res) => {
       department,
       path: folderPath,
     });
-    console.log(newFolder);
-    
+
     await newFolder.save();
     req.flash(
       "success",
@@ -354,7 +351,7 @@ const checkFolder = async (req, res) => {
     const folders = await Folder.find({
       $or: [{ createdBy: loggedInUserId }],
     })
-      .populate("createdBy", "name ")
+      .populate("createdBy", "name department")
       .skip(skip)
       .limit(limit);
 
@@ -382,9 +379,8 @@ const testCheck = async (req, res) => {
 
     const totalItems = await FolderModel.countDocuments();
     const folderId = req.params.id;
-    
 
-    const allUsers = await UserModel.find({}).select("user name");
+    const allUsers = await UserModel.find({}).select("user name department");
     const allgroups = await CommitteeGroup.find({}).select("groupName");
 
     const loggedInUserId = req.session.userId;
@@ -406,26 +402,27 @@ const testCheck = async (req, res) => {
       .lean();
 
     // 2. Get all shares for this parent folder's children
-    const folderIds = folders.map(f => f._id);
-    const fileIds = folders.flatMap(f => f.files.map(file => file._id));
+    const folderIds = folders.map((f) => f._id);
+    const fileIds = folders.flatMap((f) => f.files.map((file) => file._id));
 
     const shares = await Share.find({
-      $or: [
-        { folderId: { $in: folderIds } },
-        { fileId: { $in: fileIds } },
-      ]
+      $or: [{ folderId: { $in: folderIds } }, { fileId: { $in: fileIds } }],
     })
-    .populate("sharedWith.userId")
-    .populate("sharedWith.groupId")
-    .lean();
+      .populate("sharedWith.userId")
+      .populate("sharedWith.groupId")
+      .lean();
 
     // 3. Attach sharing info to folders and files
-    folders.forEach(folder => {
-      const shareEntry = shares.find(s => s.folderId?.toString() === folder._id.toString());
+    folders.forEach((folder) => {
+      const shareEntry = shares.find(
+        (s) => s.folderId?.toString() === folder._id.toString()
+      );
       folder.sharedWith = shareEntry ? shareEntry.sharedWith : [];
 
-      folder.files = folder.files.map(file => {
-        const fileShare = shares.find(s => s.fileId?.toString() === file._id.toString());
+      folder.files = folder.files.map((file) => {
+        const fileShare = shares.find(
+          (s) => s.fileId?.toString() === file._id.toString()
+        );
         file.sharedWith = fileShare ? fileShare.sharedWith : [];
         return file;
       });
@@ -448,10 +445,49 @@ const testCheck = async (req, res) => {
   }
 };
 
+const logDownload = async (fileId, userId) => {
+  try {
+    // First try: Look for Share with fileId
+    let share = await Share.findOne({ fileId });
+    if (share) {
+      return;
+    }
+
+    // If not found by fileId, try finding folder that contains the fileId
+    if (!share) {
+      const folderDoc = await FolderModel.findOne({ "files._id": fileId });
+      if (!folderDoc) {
+        return;
+      }
+
+      // Now try finding Share by folderId
+      share = await Share.findOne({ folderId: folderDoc._id });
+      if (!share) {
+        return;
+      }
+    }
+    // Log download only if not already logged
+    const alreadyLogged = share.downloadedBy.some(
+      (entry) => entry.userId.toString() === userId.toString()
+    );
+
+    if (!alreadyLogged) {
+      share.downloadedBy.push({ userId, downloadedAt: new Date() });
+      await share.save();
+    } else {
+      return;
+    }
+  } catch (err) {
+    console.error("🔥 Error logging download:", err);
+  }
+};
+
+
 const viewFileFromQNAP = async (req, res) => {
   const fileId = req.params.fileId;
   const loggedInUserId = req.session.userId;
   const client = new ftp.Client();
+
   try {
     const user = await UserModel.findById(loggedInUserId);
     if (!user) return res.status(404).send("User not found");
@@ -460,32 +496,29 @@ const viewFileFromQNAP = async (req, res) => {
     const ftpConfig = ftpCredentials[department];
     if (!ftpConfig) return res.status(404).send("Department not configured");
 
-    const folder = await FolderModel.findOne({ "files._id": fileId }).populate(
-      "linkedFolder"
-    );
+    const folder = await FolderModel.findOne({ "files._id": fileId }).populate("linkedFolder");
     if (!folder) return res.status(404).send("File not found in database");
 
     const file = folder.files.id(fileId);
     if (!file) return res.status(404).send("File not found");
 
-    const folderPath = folder.linkedFolder?.path;
+    // Log the download
+    await logDownload(file._id, loggedInUserId);
+
+    // Construct full path: /<linkedFolder.path>/<folder.folderName>/<file.originalname>
+    const folderPath = `${folder.linkedFolder?.path || ""}/${folder.folderName || ""}`.replace(/\/+/g, "/");
+
     if (!folderPath) return res.status(500).send("Folder path missing");
 
-    const remoteFilePath = `/${folderPath}/${file.originalname}`.trim();
+    const remoteFilePath = `/${folderPath}/${file.originalname}`.replace(/\/+/g, "/").trim();
     console.log(`Downloading file: ${remoteFilePath}`);
 
-    const mimeType =
-      mime.lookup(file.originalname) || "application/octet-stream";
+    const mimeType = mime.lookup(file.originalname) || "application/octet-stream";
     res.setHeader("Content-Type", mimeType);
-    res.setHeader(
-      "Content-Disposition",
-      `inline; filename="${file.originalname}"`
-    );
+    res.setHeader("Content-Disposition", `inline; filename="${file.originalname}"`);
 
-    const client = new ftp.Client();
     await client.access(ftpConfig);
     await client.downloadTo(res, remoteFilePath);
-    client.close();
   } catch (err) {
     console.error("Error retrieving file:", err);
     if (!res.headersSent) res.status(500).send("Internal Server Error");
@@ -493,6 +526,7 @@ const viewFileFromQNAP = async (req, res) => {
     client.close();
   }
 };
+
 
 module.exports = {
   multipleUpload,

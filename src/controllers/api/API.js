@@ -3,7 +3,6 @@ const User = require('../../model/users');
 
 const authLogin = async (req, res) => {
   const { username, password } = req.query;
-  console.log(username, password);
   
   const { accessToken } = req.body?.data || {};
   try {

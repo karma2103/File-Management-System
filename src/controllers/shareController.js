@@ -227,12 +227,15 @@ const removeSharedFolder = async (req, res) => {
     itemType,
     userId,
     groupId,
-    selected = [], // comes from bulk stop share checkboxes
+    selected = [],
     stopShareToAll,
     redirectUrl,
   } = req.body;
   const backTo = decodeURIComponent(redirectUrl || "/checking");
+
   try {
+    console.log("Request body:", req.body);
+    
     // Validate base input
     if (!itemId || !itemType) {
       req.flash("error", "Invalid request parameters");
@@ -252,24 +255,11 @@ const removeSharedFolder = async (req, res) => {
       return res.redirect(backTo);
     }
 
-    // Stop sharing with everyone
-    // Stop sharing with everyone
-    if (stopShareToAll === "true" || stopShareToAll === true) {
-      // Check if document exists before update
-      await ShareModel.findOne(query);
-      // Perform the update
-      await ShareModel.findOneAndUpdate(query, {
-        $set: { shareToAll: false, upsert: true  },
-      });
-
-      // Check the document after update
-      await ShareModel.findOne(query);
-      req.flash("success", "Stopped sharing with everyone.");
-      return res.redirect(backTo);
-    }
-
-    // Bulk Stop Sharing (selected[])
+    // FIXED: Handle bulk operations (selected array exists)
     if (Array.isArray(selected) && selected.length > 0) {
+      console.log("DEBUG: Processing bulk operation");
+      
+      // Remove selected users/groups
       const pullConditions = selected
         .map((id) => {
           const [type, val] = id.split("-");
@@ -279,10 +269,17 @@ const removeSharedFolder = async (req, res) => {
             ? { groupId: val }
             : null;
         })
-        .filter(Boolean); // Remove invalid
+        .filter(Boolean);
 
       for (const cond of pullConditions) {
         await ShareModel.updateOne(query, { $pull: { sharedWith: cond } });
+      }
+
+      // ALSO handle stopShareToAll if it's set during bulk operations
+      if (stopShareToAll === "true" || stopShareToAll === true) {
+        await ShareModel.findOneAndUpdate(query, {
+        $set: { shareToAll: false },
+      }, { upsert: true });
       }
 
       // Check if the doc should be deleted
@@ -295,35 +292,49 @@ const removeSharedFolder = async (req, res) => {
         await ShareModel.deleteOne(query);
       }
 
-      req.flash("success", "Selected access removed successfully.");
+      req.flash("success", "Access removed successfully.");
       return res.redirect(backTo);
     }
 
-    // Individual user or group removal
-    if (!userId && !groupId) {
-      req.flash("error", "Invalid request parameters");
+    // Handle ONLY stopShareToAll (no selected users)
+    if (stopShareToAll === "true" || stopShareToAll === true) {
+      console.log("DEBUG: Processing stopShareToAll only");
+      
+      await ShareModel.findOneAndUpdate(query, {
+        $set: { shareToAll: false },
+      }, { upsert: true });
+
+      req.flash("success", "Stopped sharing with everyone.");
       return res.redirect(backTo);
     }
 
-    const pullQuery = {};
-    if (userId) pullQuery.userId = userId;
-    if (groupId) pullQuery.groupId = groupId;
+    // Handle individual user or group removal (legacy - probably not used with your current frontend)
+    if (userId || groupId) {
+      console.log("DEBUG: Processing individual removal");
+      
+      const pullCondition = userId ? { userId: userId } : { groupId: groupId };
 
-    await ShareModel.updateOne(query, {
-      $pull: { sharedWith: pullQuery },
-    });
+      await ShareModel.updateOne(query, {
+        $pull: { sharedWith: pullCondition },
+      });
 
-    const updatedShare = await ShareModel.findOne(query);
-    if (
-      updatedShare &&
-      updatedShare.sharedWith.length === 0 &&
-      !updatedShare.shareToAll
-    ) {
-      await ShareModel.deleteOne(query);
+      const updatedShare = await ShareModel.findOne(query);
+      if (
+        updatedShare &&
+        updatedShare.sharedWith.length === 0 &&
+        !updatedShare.shareToAll
+      ) {
+        await ShareModel.deleteOne(query);
+      }
+
+      req.flash("success", "Sharing access removed successfully");
+      return res.redirect(backTo);
     }
 
-    req.flash("success", "Sharing access removed successfully");
+    // If we reach here, invalid request
+    req.flash("error", "Invalid request parameters");
     return res.redirect(backTo);
+
   } catch (err) {
     console.error("Error removing shared access:", err);
     req.flash("error", "Server error occurred while removing access");

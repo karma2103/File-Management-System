@@ -46,11 +46,12 @@ const ViewCommittee = async (req, res) => {
     const groups = await CommitteeGroup.find()
       .populate("memberSecretary", "name department")
       .populate("members", "name department");
-    
+         
     res.render("ViewGroups", {
       user: user || null,
       groups: groups || [],
       allUsers: allUsers || [],
+      currentUserId: req.session.userId // Pass current user ID to template
     });
   } catch (error) {
     console.error("Error fetching groups:", error);
@@ -63,22 +64,28 @@ const editGroup = async (req, res) => {
   try {
     const groupId = req.params.id;
     const user = req.session.userId;
-
-    const group = await CommitteeGroup.findById(groupId)
-      .populate("memberSecretary")
-      .populate("members");
-    const users = await UserModel.find(); // for dropdowns
+    
+    // Find the group and check if current user is the leader
+    const group = await CommitteeGroup.findById(groupId).populate("memberSecretary");
+    
     if (!group) {
-      return res.status(404).send("Committee Group not found");
+      return res.status(404).send("Group not found");
     }
+    const users = await UserModel.find();
+    // Check if current user is the group leader
+    if (group.memberSecretary._id.toString() !== user.toString()) {
+      return res.status(403).send("Access denied. Only group leader can edit this group.");
+    }
+    
     res.render("EditGroup", {
       group,
       users,
       user
     });
-  } catch (err) {
-    console.error(err);
-    res.status(500).send("Server Error");
+    
+  } catch (error) {
+    console.error("Error in edit group:", error);
+    res.status(500).send("Internal Server Error");
   }
 };
 //Post Edited Group
@@ -110,10 +117,60 @@ const postEditGroup = async (req, res) => {
     res.status(500).send("Server Error");
   }
 };
+
+// Delete The group 
+const deleteGroup = async (req, res) => {
+  try {
+    const groupId = req.params.id;
+    const currentUserId = req.session.userId;
+
+    // Check if user is logged in (might be redundant if requireAuth middleware handles this)
+    if (!currentUserId) {
+      return res.status(401).json({ 
+        success: false, 
+        message: "Please log in to perform this action" 
+      });
+    }
+
+    // Find the group and populate memberSecretary to check leadership
+    const group = await CommitteeGroup.findById(groupId).populate("memberSecretary");
+
+    if (!group) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "Group not found" 
+      });
+    }
+
+    // Check if current user is the group leader (memberSecretary)
+    if (!group.memberSecretary || group.memberSecretary._id.toString() !== currentUserId.toString()) {
+      return res.status(403).json({ 
+        success: false, 
+        message: "Access denied. Only the group leader can delete this group." 
+      });
+    }
+
+    // Delete the group
+    await CommitteeGroup.findByIdAndDelete(groupId);
+
+    res.status(200).json({ 
+      success: true, 
+      message: "Group deleted successfully" 
+    });
+
+  } catch (error) {
+    console.error("Error deleting group:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Internal Server Error" 
+    });
+  }
+};
 module.exports = {
   AddGroupMembers,
   addCommittee,
   ViewCommittee,
   editGroup,
-  postEditGroup
+  postEditGroup,
+  deleteGroup
 };

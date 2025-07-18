@@ -58,6 +58,7 @@ let routes = app => {
   router.get('/addCommittee', requireAuth, CommitteeController.addCommittee);
   router.get('/editGroup/:id', requireAuth, CommitteeController.editGroup);
   router.post('/committee-groups/:id/edit', requireAuth, CommitteeController.postEditGroup);
+  router.delete("/deleteGroup/:id", requireAuth, CommitteeController.deleteGroup)
 
   return app.use("/", router);
 };

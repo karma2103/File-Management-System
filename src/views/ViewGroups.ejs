@@ -68,8 +68,9 @@
                 </thead>
                 <tbody>
                   <% groups.forEach((group, index) => { %>
-                  <tr class="group-row"> 
-                    <td><%= index + 1 %></td> <td><%= group.groupName %></td>
+                  <tr class="group-row">
+                    <td><%= index + 1 %></td>
+                    <td><%= group.groupName %></td>
                     <td><%= group.memberSecretary?.name %></td>
                     <td>
                       <ul class="mb-0">
@@ -80,19 +81,26 @@
                     </td>
                     <td>
                       <div class="d-flex gap-2">
+                        <% if (currentUserId && group.memberSecretary && group.memberSecretary._id.toString() === currentUserId.toString()) { %>
+                        <!-- Edit button - only visible to group leader -->
                         <a href="/editGroup/<%= group._id %>" class="btn btn-soft-secondary btn-sm">
                           <iconify-icon icon="cuida:edit-outline" class="align-middle fs-18"></iconify-icon>
                         </a>
-                        <a href="#!" class="btn btn-soft-danger btn-sm">
+                        <!-- Delete button - only visible to group leader -->
+                        <button onclick="deleteGroup('<%= group._id %>', '<%= group.groupName %>')" class="btn btn-soft-danger btn-sm" type="button">
                           <iconify-icon icon="solar:trash-bin-minimalistic-2-broken" class="align-middle fs-18"></iconify-icon>
-                        </a>
+                        </button>
+                        <% } else { %>
+                        <!-- Show disabled buttons or message for non-leaders -->
+                        <span class="text-muted small">Only group leader can edit</span>
+                        <% } %>
                       </div>
                     </td>
                   </tr>
                   <% }) %>
-                   <tr id="noResultsRow" style="display: none;">
-                      <td colspan="5" class="text-center">No  groups found.</td>
-                   </tr>
+                  <tr id="noResultsRow" style="display: none;">
+                    <td colspan="5" class="text-center">No groups found.</td>
+                  </tr>
                 </tbody>
               </table>
             </div>
@@ -112,7 +120,7 @@
       </div>
     </div>
   </div>
-
+<!-- Search Functionality  -->
   <script>
     document.addEventListener("DOMContentLoaded", function() {
       const searchInput = document.getElementById("search");
@@ -138,14 +146,14 @@
         if (!anyVisible && query !== "") { // Only show if there's a query and no results
           noResultsRow.style.display = "table-row";
           if (noGroupsMessage) { // Hide "No groups created" if it exists
-              noGroupsMessage.style.display = "none";
+            noGroupsMessage.style.display = "none";
           }
         } else {
           noResultsRow.style.display = "none";
           if (noGroupsMessage && groupRows.length === 0) { // Show "No groups created" if there are no groups and no search
-              noGroupsMessage.style.display = "block";
+            noGroupsMessage.style.display = "block";
           } else if (noGroupsMessage) { // Otherwise, hide it
-              noGroupsMessage.style.display = "none";
+            noGroupsMessage.style.display = "none";
           }
         }
 
@@ -156,10 +164,10 @@
           }
           document.getElementById("groupTable").style.display = "none"; // Hide the table if no groups
         } else if (groupRows.length > 0 && query === "") {
-            document.getElementById("groupTable").style.display = ""; // Show the table if there are groups and no search
-            if (noGroupsMessage) {
-              noGroupsMessage.style.display = "none";
-            }
+          document.getElementById("groupTable").style.display = ""; // Show the table if there are groups and no search
+          if (noGroupsMessage) {
+            noGroupsMessage.style.display = "none";
+          }
         }
       }
 
@@ -167,5 +175,74 @@
       filterRows(); // Initial call to set correct state
     });
   </script>
+  <!-- Function to Delete The group -->
+  <script>
+    async function deleteGroup(groupId, groupName) {
+      // Show confirmation dialog
+      const isConfirmed = confirm(`Are you sure you want to delete the group "${groupName}"? This action cannot be undone.`);
 
+      if (!isConfirmed) {
+        return;
+      }
+
+      // Get the button that was clicked
+      const deleteButton = event.target.closest('button');
+      const originalContent = deleteButton.innerHTML;
+
+      try {
+        // Show loading state
+        deleteButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+        deleteButton.disabled = true;
+
+        // Send DELETE request
+        const response = await fetch(`/deleteGroup/${groupId}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        // Check if response is ok
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (result.success) {
+          // Remove the row from the table
+          const groupRow = document.getElementById(`group-${groupId}`);
+          if (groupRow) {
+            groupRow.remove();
+          }
+
+          // Show success message
+          alert('Group deleted successfully');
+
+          // Check if table is empty and show "no results" message
+          const tbody = document.querySelector('#groupTable tbody');
+          const remainingRows = tbody.querySelectorAll('.group-row');
+          if (remainingRows.length === 0) {
+            document.getElementById('noResultsRow').style.display = 'table-row';
+          }
+
+        } else {
+          // Show error message and restore button
+          alert(result.message || 'Error deleting group');
+          restoreButton();
+        }
+
+      } catch (error) {
+        console.error('Error deleting group:', error);
+        alert('Error deleting group. Please try again.');
+        restoreButton();
+      }
+
+      // Function to restore button state
+      function restoreButton() {
+        deleteButton.innerHTML = originalContent;
+        deleteButton.disabled = false;
+      }
+    }
+  </script>
   <%- include("./Layouts/footer") %>

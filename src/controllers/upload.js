@@ -75,10 +75,115 @@ const ftpCredentials = {
     user: process.env.FTP_USER_CSBD,
     password: process.env.FTP_PASSWORD_CSBD,
   },
-  Branch: {
-    host: process.env.FTP_HOST_BRANCH,
-    user: process.env.FTP_USER_BRANCH,
-    password: process.env.FTP_PASSWORD_BRANCH,
+  Phuentsholing: {
+    host: process.env.FTP_HOST_PHUENTSHOLING,
+    user: process.env.FTP_USER_PHUENTSHOLING,
+    password: process.env.FTP_PASSWORD_PHUENTSHOLING,
+  },
+  Wangdue: {
+    host: process.env.FTP_HOST_WANGDUE,
+    user: process.env.FTP_USER_WANGDUE,
+    password: process.env.FTP_PASSWORD_WANGDUE,
+  },
+  Paro: {
+    host: process.env.FTP_HOST_PARO,
+    user: process.env.FTP_USER_PARO,
+    password: process.env.FTP_PASSWORD_PARO,
+  },
+  Gelephu: {
+    host: process.env.FTP_HOST_GELEPHU,
+    user: process.env.FTP_USER_GELEPHU,
+    password: process.env.FTP_PASSWORD_GELEPHU,
+  },
+  Babesa: {
+    host: process.env.FTP_HOST_BABESA,
+    user: process.env.FTP_USER_BABESA,
+    password: process.env.FTP_PASSWORD_BABESA,
+  },
+  "Thimphu City": {
+    host: process.env.FTP_HOST_THIMPHU_CITY,
+    user: process.env.FTP_USER_THIMPHU_CITY,
+    password: process.env.FTP_PASSWORD_THIMPHU_CITY,
+  },
+  "Paro Lango": {
+    host: process.env.FTP_HOST_PARO_LANG0,
+    user: process.env.FTP_USER_PARO_LANG0,
+    password: process.env.FTP_PASSWORD_PARO_LANG0,
+  },
+  "Samdrup Jongkhar": {
+    host: process.env.FTP_HOST_SAMDRUP_JONGKHAR,
+    user: process.env.FTP_USER_SAMDRUP_JONGKHAR,
+    password: process.env.FTP_PASSWORD_SAMDRUP_JONGKHAR,
+  },
+  Mongar: {
+    host: process.env.FTP_HOST_MONGAR,
+    user: process.env.FTP_USER_MONGAR,
+    password: process.env.FTP_PASSWORD_MONGAR,
+  },
+  Bumthang: {
+    host: process.env.FTP_HOST_BUMTHANG,
+    user: process.env.FTP_USER_BUMTHANG,
+    password: process.env.FTP_PASSWORD_BUMTHANG,
+  },
+  Trashigang: {
+    host: process.env.FTP_HOST_TRASHIGANG,
+    user: process.env.FTP_USER_TRASHIGANG,
+    password: process.env.FTP_PASSWORD_TRASHIGANG,
+  },
+  Tsirang: {
+    host: process.env.FTP_HOST_TSIRANG,
+    user: process.env.FTP_USER_TSIRANG,
+    password: process.env.FTP_PASSWORD_TSIRANG,
+  },
+  Trongsa: {
+    host: process.env.FTP_HOST_TRONGSA,
+    user: process.env.FTP_USER_TRONGSA,
+    password: process.env.FTP_PASSWORD_TRONGSA,
+  },
+  Samtse: {
+    host: process.env.FTP_HOST_SAMTSE,
+    user: process.env.FTP_USER_SAMTSE,
+    password: process.env.FTP_PASSWORD_SAMTSE,
+  },
+  Zhemgang: {
+    host: process.env.FTP_HOST_ZHEMGANG,
+    user: process.env.FTP_USER_ZHEMGANG,
+    password: process.env.FTP_PASSWORD_ZHEMGANG,
+  },
+  Nganglam: {
+    host: process.env.FTP_HOST_NGANGLAM,
+    user: process.env.FTP_USER_NGANGLAM,
+    password: process.env.FTP_PASSWORD_NGANGLAM,
+  },
+  Khuruthang: {
+    host: process.env.FTP_HOST_KHURUTHANG,
+    user: process.env.FTP_USER_KHURUTHANG,
+    password: process.env.FTP_PASSWORD_KHURUTHANG,
+  },
+  Gedu: {
+    host: process.env.FTP_HOST_GEDU,
+    user: process.env.FTP_USER_GEDU,
+    password: process.env.FTP_PASSWORD_GEDU,
+  },
+  Haa: {
+    host: process.env.FTP_HOST_HAA,
+    user: process.env.FTP_USER_HAA,
+    password: process.env.FTP_PASSWORD_HAA,
+  },
+  Trashiyangtse: {
+    host: process.env.FTP_HOST_TRASHIYANGTSE,
+    user: process.env.FTP_USER_TRASHIYANGTSE,
+    password: process.env.FTP_PASSWORD_TRASHIYANGTSE,
+  },
+  Dagapela: {
+    host: process.env.FTP_HOST_DAGAPELA,
+    user: process.env.FTP_USER_DAGAPELA,
+    password: process.env.FTP_PASSWORD_DAGAPELA,
+  },
+  Tashichhoeling: {
+    host: process.env.FTP_HOST_TASHICHHOELING,
+    user: process.env.FTP_USER_TASHICHHOELING,
+    password: process.env.FTP_PASSWORD_TASHICHHOELING,
   },
 };
 
@@ -482,7 +587,6 @@ const logDownload = async (fileId, userId) => {
   }
 };
 
-
 const viewFileFromQNAP = async (req, res) => {
   const fileId = req.params.fileId;
   const loggedInUserId = req.session.userId;
@@ -496,7 +600,9 @@ const viewFileFromQNAP = async (req, res) => {
     const ftpConfig = ftpCredentials[department];
     if (!ftpConfig) return res.status(404).send("Department not configured");
 
-    const folder = await FolderModel.findOne({ "files._id": fileId }).populate("linkedFolder");
+    const folder = await FolderModel.findOne({ "files._id": fileId }).populate(
+      "linkedFolder"
+    );
     if (!folder) return res.status(404).send("File not found in database");
 
     const file = folder.files.id(fileId);
@@ -506,16 +612,24 @@ const viewFileFromQNAP = async (req, res) => {
     await logDownload(file._id, loggedInUserId);
 
     // Construct full path: /<linkedFolder.path>/<folder.folderName>/<file.originalname>
-    const folderPath = `${folder.linkedFolder?.path || ""}/${folder.folderName || ""}`.replace(/\/+/g, "/");
+    const folderPath = `${folder.linkedFolder?.path || ""}/${
+      folder.folderName || ""
+    }`.replace(/\/+/g, "/");
 
     if (!folderPath) return res.status(500).send("Folder path missing");
 
-    const remoteFilePath = `/${folderPath}/${file.originalname}`.replace(/\/+/g, "/").trim();
+    const remoteFilePath = `/${folderPath}/${file.originalname}`
+      .replace(/\/+/g, "/")
+      .trim();
     console.log(`Downloading file: ${remoteFilePath}`);
 
-    const mimeType = mime.lookup(file.originalname) || "application/octet-stream";
+    const mimeType =
+      mime.lookup(file.originalname) || "application/octet-stream";
     res.setHeader("Content-Type", mimeType);
-    res.setHeader("Content-Disposition", `inline; filename="${file.originalname}"`);
+    res.setHeader(
+      "Content-Disposition",
+      `inline; filename="${file.originalname}"`
+    );
 
     await client.access(ftpConfig);
     await client.downloadTo(res, remoteFilePath);
@@ -526,7 +640,6 @@ const viewFileFromQNAP = async (req, res) => {
     client.close();
   }
 };
-
 
 module.exports = {
   multipleUpload,
